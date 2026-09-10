@@ -334,9 +334,12 @@ a {
   padding: 1.7rem 1.8rem 1.8rem;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 1.35rem;
-  background: rgba(7, 7, 7, 0.56);
+  background: linear-gradient(
+    105deg,
+    rgba(7, 7, 7, var(--presentation-card-alpha, 0.92)) 0%,
+    rgba(7, 7, 7, var(--presentation-card-end-alpha, 0.92)) 100%
+  );
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(22px) saturate(1.15);
 }
 
 .hero-copy h1 {
@@ -604,9 +607,7 @@ a {
 .product-visual::after {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(rgba(0, 0, 0, var(--showcase-black-fade, 0)), rgba(0, 0, 0, var(--showcase-black-fade, 0))),
-    linear-gradient(180deg, transparent 58%, rgba(0, 0, 0, 0.54));
+  background: linear-gradient(180deg, transparent 58%, rgba(0, 0, 0, 0.54));
   content: "";
   pointer-events: none;
 }
@@ -617,13 +618,7 @@ a {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: var(--showcase-opacity, 1);
-  transition: transform 700ms ease, opacity 240ms ease;
-}
-
-.product-monogram {
-  opacity: var(--showcase-opacity, 1);
-  transition: opacity 240ms ease;
+  transition: transform 700ms ease;
 }
 
 .product-card:hover .product-image {

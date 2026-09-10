@@ -549,12 +549,12 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                     <Switch checked={content.appearance.boldText} onCheckedChange={(checked) => updateAppearance("boldText", checked)} aria-label="Ativar texto em negrito" />
                   </div>
                   <div className="control-card">
-                    <div className="control-card-heading"><span><Eye /></span><div><strong>Transparência das vitrines</strong><p>0% mantém o visual normal; 100% oculta a imagem.</p></div></div>
+                    <div className="control-card-heading"><span><Eye /></span><div><strong>Transparência do card inicial</strong><p>0% mantém o fundo sólido; 100% revela totalmente a logotipo.</p></div></div>
                     <div className="slider-row"><Slider value={[content.appearance.showcaseTransparency]} min={0} max={100} step={1} onValueChange={([value]) => updateAppearance("showcaseTransparency", value)} /><output>{content.appearance.showcaseTransparency}%</output></div>
                   </div>
                   <div className="control-card control-card-switch">
-                    <div className="control-card-heading"><span><Contrast /></span><div><strong>Fade preto discreto</strong><p>Escurece suavemente o visual sem afetar os textos.</p></div></div>
-                    <Switch checked={content.appearance.showcaseBlackFade} onCheckedChange={(checked) => updateAppearance("showcaseBlackFade", checked)} aria-label="Ativar fade preto nas vitrines" />
+                    <div className="control-card-heading"><span><Contrast /></span><div><strong>Fade preto discreto</strong><p>Suaviza o lado do card que fica sobre a logotipo, sem desfoque.</p></div></div>
+                    <Switch checked={content.appearance.showcaseBlackFade} onCheckedChange={(checked) => updateAppearance("showcaseBlackFade", checked)} aria-label="Ativar fade preto no card inicial" />
                   </div>
                 </div>
 

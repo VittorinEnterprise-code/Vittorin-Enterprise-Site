@@ -74,13 +74,18 @@ function storefrontStyle(
 ) {
   const ui = Math.min(1.6, Math.max(0.6, interfacePercentage / 100));
   const font = Math.min(1.4, Math.max(0.85, fontPercentage / 100));
-  const showcaseOpacity = Math.min(1, Math.max(0, 1 - showcaseTransparency / 100));
+  const presentationCardAlpha = Math.min(
+    0.92,
+    Math.max(0, 0.92 * (1 - showcaseTransparency / 100)),
+  );
 
   return {
     "--brand-accent": accentColor,
     "--site-contrast": `${Math.min(140, Math.max(85, contrast))}%`,
-    "--showcase-opacity": showcaseOpacity.toFixed(2),
-    "--showcase-black-fade": showcaseBlackFade ? "0.26" : "0",
+    "--presentation-card-alpha": presentationCardAlpha.toFixed(3),
+    "--presentation-card-end-alpha": showcaseBlackFade
+      ? (presentationCardAlpha * 0.35).toFixed(3)
+      : presentationCardAlpha.toFixed(3),
     "--font-eyebrow": scaled(0.73, font, "rem"),
     "--font-brand": scaled(0.84, font, "rem"),
     "--font-nav": scaled(0.88, font, "rem"),

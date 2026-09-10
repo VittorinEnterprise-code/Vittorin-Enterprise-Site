@@ -10,7 +10,7 @@ Site-vitrine oficial da Vittorin Enterprise para aplicativos, tecnologia e inova
 - cartões de produto com imagem, status, descrição e link externo;
 - blocos adicionais de recepção com textos, links e destaques;
 - escala de interface, tamanho tipográfico, negrito, contraste e fonte personalizada;
-- transparência ajustável e fade preto opcional nas vitrines;
+- transparência ajustável e fade preto opcional no card inicial de apresentação;
 - trilha MP3 opcional em loop, com controle de reprodução para o visitante;
 - área opcional para vídeo promocional;
 - layout adaptado para desktop, tablet e celular.
@@ -27,7 +27,7 @@ O Estúdio permite editar:
 - número de colunas da vitrine;
 - vídeo promocional por upload ou URL;
 - escala da interface de 60% a 160%, tamanho das letras, negrito e contraste;
-- transparência das vitrines de 0% a 100% e fade preto discreto;
+- transparência do card inicial de 0% a 100% e fade preto discreto, sem desfoque sobre a logotipo;
 - fonte personalizada por upload (WOFF2, WOFF, TTF ou OTF);
 - trilha MP3 de fundo, volume inicial e reprodução em loop;
 - até 20 elementos adicionais de recepção, ordenáveis e ocultáveis.

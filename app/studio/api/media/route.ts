@@ -9,6 +9,15 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "image/gif": "gif",
   "video/mp4": "mp4",
   "video/webm": "webm",
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
+  "font/woff2": "woff2",
+  "font/woff": "woff",
+  "font/ttf": "ttf",
+  "font/otf": "otf",
+  "application/font-woff": "woff",
+  "application/x-font-ttf": "ttf",
+  "application/x-font-opentype": "otf",
 };
 
 type AccessFailure = Exclude<
@@ -44,13 +53,16 @@ export async function POST(request: Request) {
     const file = form.get("file");
     if (!(file instanceof File)) {
       return Response.json(
-        { error: "Selecione uma imagem ou vídeo." },
+        { error: "Selecione uma imagem, vídeo, áudio ou arquivo de fonte." },
         { status: 400 },
       );
     }
     if (!MIME_EXTENSIONS[file.type]) {
       return Response.json(
-        { error: "Formato não aceito. Use JPG, PNG, WebP, GIF, MP4 ou WebM." },
+        {
+          error:
+            "Formato não aceito. Use JPG, PNG, WebP, GIF, MP4, WebM, MP3, WOFF, WOFF2, TTF ou OTF.",
+        },
         { status: 415 },
       );
     }

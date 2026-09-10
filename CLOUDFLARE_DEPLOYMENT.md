@@ -3,8 +3,8 @@
 Este projeto usa quatro recursos independentes da conta:
 
 - **Workers** para o site e o Estúdio;
-- **D1** para textos, categorias e produtos;
-- **R2** para imagens e vídeos enviados;
+- **D1** para textos, aparência, elementos de recepção, categorias e produtos;
+- **R2** para imagens, vídeos, MP3 e fontes enviados;
 - **Cloudflare Access** para restringir `/studio*` ao e-mail `vittorinoenterprise@gmail.com`.
 
 O Juris Immersive não é alterado. Use nomes próprios para os recursos da Vittorin.
@@ -47,6 +47,19 @@ Cadastre estas variáveis de build:
 
 O Worker inicializa as tabelas necessárias no D1 de forma idempotente no primeiro acesso. Assim, o deploy conectado ao GitHub não depende de uma etapa manual no console SQL. Se a Cloudflare rejeitar o vínculo D1 por permissão da conta, selecione no Workers Builds um token próprio com **Workers Scripts: Edit**, **Workers R2 Storage: Edit** e **Workers D1: Edit**.
 
+## Atualizar pelo GitHub Desktop
+
+Depois de substituir a pasta local do projeto pela versão atualizada:
+
+1. Abra o repositório no GitHub Desktop e confira a lista de arquivos alterados.
+2. No campo **Summary**, informe uma mensagem como `Atualiza Estúdio e personalização visual`.
+3. Clique em **Commit to main**.
+4. Clique em **Push origin**.
+5. A Cloudflare iniciará automaticamente um novo build da branch `main`.
+6. No painel, abra **Workers & Pages > vittorin-enterprise > Deployments** e aguarde o status de sucesso.
+
+Não recrie o Worker, o D1, o R2 ou a aplicação Access. O deploy reaproveita os recursos e as variáveis já cadastrados.
+
 ## 3. Associar o domínio
 
 Após o primeiro deploy, abra o Worker, adicione o domínio escolhido em **Settings > Domains & Routes** e confirme que a aplicação Access usa exatamente esse mesmo hostname e o caminho `/studio*`.
@@ -58,3 +71,4 @@ Após o primeiro deploy, abra o Worker, adicione o domínio escolhido em **Setti
 - Entre com `vittorinoenterprise@gmail.com`.
 - Salve uma alteração, recarregue a página e confirme a persistência no D1.
 - Envie uma imagem pequena e confirme que ela reaparece na vitrine a partir do R2.
+- Teste uma fonte WOFF2 e um MP3 curto; se o áudio não iniciar sozinho, clique em **Ativar trilha**, comportamento esperado em navegadores que bloqueiam autoplay com som.

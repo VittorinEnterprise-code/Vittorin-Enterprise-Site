@@ -27,6 +27,32 @@ export const siteContentSchema = z
       showPromoVideo: z.boolean(),
       footerText: shortText,
     }),
+    appearance: z.object({
+      interfaceScale: z.number().int().min(85).max(115),
+      fontScale: z.number().int().min(85).max(140),
+      boldText: z.boolean(),
+      contrast: z.number().int().min(85).max(140),
+      customFontUrl: mediaReference,
+      backgroundAudioUrl: mediaReference,
+      backgroundAudioEnabled: z.boolean(),
+      backgroundAudioVolume: z.number().int().min(0).max(100),
+    }),
+    welcomeElements: z
+      .array(
+        z.object({
+          id,
+          type: z.enum(["text", "link", "highlight"]),
+          eyebrow: shortText,
+          title: z.string().min(1).max(180),
+          body: longText,
+          linkLabel: z.string().max(60),
+          linkUrl: mediaReference,
+          accentColor: color,
+          isVisible: z.boolean(),
+          sortOrder: z.number().int().min(0).max(9999),
+        }),
+      )
+      .max(20),
     categories: z
       .array(
         z.object({
@@ -67,6 +93,25 @@ export const siteContentSchema = z
     const categorySlugs = new Set<string>();
     const productIds = new Set<string>();
     const productSlugs = new Set<string>();
+    const welcomeIds = new Set<string>();
+
+    content.welcomeElements.forEach((element, index) => {
+      if (welcomeIds.has(element.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["welcomeElements", index, "id"],
+          message: "Identificador de elemento de recepção duplicado.",
+        });
+      }
+      if (element.type === "link" && (!element.linkLabel.trim() || !element.linkUrl.trim())) {
+        context.addIssue({
+          code: "custom",
+          path: ["welcomeElements", index, "linkUrl"],
+          message: "Elementos do tipo link precisam de texto e endereço.",
+        });
+      }
+      welcomeIds.add(element.id);
+    });
 
     content.categories.forEach((category, index) => {
       if (categorySlugs.has(category.slug)) {

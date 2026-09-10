@@ -8,6 +8,9 @@ Site-vitrine oficial da Vittorin Enterprise para aplicativos, tecnologia e inova
 - modos claro, escuro e preferência do sistema;
 - vitrines filtráveis por categoria;
 - cartões de produto com imagem, status, descrição e link externo;
+- blocos adicionais de recepção com textos, links e destaques;
+- escala de interface, tamanho tipográfico, negrito, contraste e fonte personalizada;
+- trilha MP3 opcional em loop, com controle de reprodução para o visitante;
 - área opcional para vídeo promocional;
 - layout adaptado para desktop, tablet e celular.
 
@@ -21,11 +24,17 @@ O Estúdio permite editar:
 - produtos, ordem, categoria, status, visibilidade e destaque;
 - categorias, descrições, endereços e ordem;
 - número de colunas da vitrine;
-- vídeo promocional por upload ou URL.
+- vídeo promocional por upload ou URL;
+- escala da interface, tamanho das letras, negrito e contraste;
+- fonte personalizada por upload (WOFF2, WOFF, TTF ou OTF);
+- trilha MP3 de fundo, volume inicial e reprodução em loop;
+- até 20 elementos adicionais de recepção, ordenáveis e ocultáveis.
 
 ## Dados e mídia
 
-O conteúdo estruturado é persistido em D1. Imagens e vídeos enviados pelo Estúdio são armazenados em R2. A preferência de tema permanece apenas no dispositivo do visitante.
+O conteúdo estruturado é persistido em D1. Imagens, vídeos, fontes e MP3 enviados pelo Estúdio são armazenados em R2. A preferência de tema permanece apenas no dispositivo do visitante.
+
+Por segurança e pelas políticas dos navegadores, uma trilha configurada tenta iniciar automaticamente, mas alguns visitantes precisarão clicar uma vez em **Ativar trilha**. O controle público permite pausar e retomar o áudio.
 
 ## Desenvolvimento
 

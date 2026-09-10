@@ -1,20 +1,28 @@
 "use client";
 
 import {
+  AudioLines,
   ArrowLeft,
+  Bold,
   Boxes,
   Check,
+  Contrast,
   Eye,
   Layers3,
+  Link2,
   Loader2,
   LogOut,
+  Maximize2,
+  MessageSquareText,
   MonitorPlay,
   PackagePlus,
   Palette,
   Plus,
   Save,
   Settings2,
+  Sparkles,
   Trash2,
+  Type,
   Upload,
 } from "lucide-react";
 import Link from "next/link";
@@ -42,6 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import {
   Sheet,
   SheetContent,
@@ -56,10 +65,12 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   DEFAULT_CONTENT,
   STATUS_LABELS,
+  type AppearanceSettings,
   type Product,
   type ProductCategory,
   type SiteContent,
   type SiteSettings,
+  type WelcomeElement,
 } from "@/lib/site-content";
 
 type StudioClientProps = {
@@ -215,6 +226,8 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
           annotations: { readOnlyHint: true, untrustedContentHint: false },
           execute: () => ({
             settings: content.settings,
+            appearance: content.appearance,
+            welcomeElements: content.welcomeElements.length,
             categories: content.categories.length,
             products: content.products.length,
           }),
@@ -278,6 +291,55 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
   const updateSettings = <K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) => {
     setContent((current) =>
       current ? { ...current, settings: { ...current.settings, [key]: value } } : current,
+    );
+  };
+
+  const updateAppearance = <K extends keyof AppearanceSettings>(
+    key: K,
+    value: AppearanceSettings[K],
+  ) => {
+    setContent((current) =>
+      current
+        ? { ...current, appearance: { ...current.appearance, [key]: value } }
+        : current,
+    );
+  };
+
+  const updateWelcomeElement = (id: string, patch: Partial<WelcomeElement>) => {
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            welcomeElements: current.welcomeElements.map((element) =>
+              element.id === id ? { ...element, ...patch } : element,
+            ),
+          }
+        : current,
+    );
+  };
+
+  const removeWelcomeElement = (id: string) => {
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            welcomeElements: current.welcomeElements.filter((element) => element.id !== id),
+          }
+        : current,
+    );
+  };
+
+  const addWelcomeElement = () => {
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            welcomeElements: [
+              ...current.welcomeElements,
+              newWelcomeElement(current.welcomeElements.length, current.settings.accentColor),
+            ],
+          }
+        : current,
     );
   };
 
@@ -459,6 +521,94 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                   <MediaUpload accept="image/jpeg,image/png,image/webp,image/gif" label="Enviar imagem principal" onUploaded={(url) => updateSettings("heroImageUrl", url)} />
                 </Field>
               </div>
+
+              <div className="studio-subsection">
+                <div className="studio-section-heading studio-section-heading-compact">
+                  <div><p className="eyebrow">APARÊNCIA</p><h2>Escala e tipografia</h2></div>
+                  <p>Estes ajustes afetam apenas a vitrine pública. O Estúdio mantém seu tamanho normal.</p>
+                </div>
+
+                <div className="appearance-grid">
+                  <div className="control-card">
+                    <div className="control-card-heading"><span><Maximize2 /></span><div><strong>Escala da interface</strong><p>Espaços, cartões e componentes.</p></div></div>
+                    <div className="slider-row"><Slider value={[content.appearance.interfaceScale]} min={85} max={115} step={1} onValueChange={([value]) => updateAppearance("interfaceScale", value)} /><output>{content.appearance.interfaceScale}%</output></div>
+                  </div>
+                  <div className="control-card">
+                    <div className="control-card-heading"><span><Type /></span><div><strong>Tamanho das letras</strong><p>Ajuste independente da interface.</p></div></div>
+                    <div className="slider-row"><Slider value={[content.appearance.fontScale]} min={85} max={140} step={1} onValueChange={([value]) => updateAppearance("fontScale", value)} /><output>{content.appearance.fontScale}%</output></div>
+                  </div>
+                  <div className="control-card">
+                    <div className="control-card-heading"><span><Contrast /></span><div><strong>Contraste</strong><p>Realça textos, imagens e superfícies.</p></div></div>
+                    <div className="slider-row"><Slider value={[content.appearance.contrast]} min={85} max={140} step={1} onValueChange={([value]) => updateAppearance("contrast", value)} /><output>{content.appearance.contrast}%</output></div>
+                  </div>
+                  <div className="control-card control-card-switch">
+                    <div className="control-card-heading"><span><Bold /></span><div><strong>Texto em negrito</strong><p>Reforça todos os textos da vitrine.</p></div></div>
+                    <Switch checked={content.appearance.boldText} onCheckedChange={(checked) => updateAppearance("boldText", checked)} aria-label="Ativar texto em negrito" />
+                  </div>
+                </div>
+
+                <div className="studio-font-card">
+                  <Field label="Fonte personalizada" hint="Envie WOFF2, WOFF, TTF ou OTF. Fontes por URL externa podem exigir permissão CORS.">
+                    <Input value={content.appearance.customFontUrl} onChange={(e) => updateAppearance("customFontUrl", e.target.value)} placeholder="/media/uploads/minha-fonte.woff2" />
+                    <div className="inline-upload-actions">
+                      <MediaUpload accept="font/woff2,font/woff,font/ttf,font/otf,.woff2,.woff,.ttf,.otf" label="Enviar arquivo de fonte" onUploaded={(url) => updateAppearance("customFontUrl", url)} />
+                      {content.appearance.customFontUrl && <Button type="button" variant="ghost" size="sm" onClick={() => updateAppearance("customFontUrl", "")}>Usar fonte original</Button>}
+                    </div>
+                  </Field>
+                </div>
+              </div>
+
+              <div className="studio-subsection">
+                <div className="studio-section-heading studio-section-heading-compact">
+                  <div><p className="eyebrow">RECEPÇÃO</p><h2>Textos, links e destaques</h2></div>
+                  <Button type="button" onClick={addWelcomeElement} disabled={content.welcomeElements.length >= 20}><Plus /> Novo elemento</Button>
+                </div>
+
+                <div className="welcome-editor-list">
+                  {content.welcomeElements.map((element, index) => (
+                    <article className="welcome-editor" key={element.id}>
+                      <div className="welcome-editor-heading">
+                        <div className="welcome-editor-title">
+                          <span>{element.type === "link" ? <Link2 /> : element.type === "highlight" ? <Sparkles /> : <MessageSquareText />}</span>
+                          <div><strong>{element.title || `Elemento ${index + 1}`}</strong><small>Ordem {element.sortOrder}</small></div>
+                        </div>
+                        <div className="welcome-editor-actions">
+                          <div className="switch-row"><Label>Visível</Label><Switch checked={element.isVisible} onCheckedChange={(checked) => updateWelcomeElement(element.id, { isVisible: checked })} /></div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild><Button type="button" variant="ghost" size="icon-sm" aria-label={`Excluir ${element.title || "elemento"}`}><Trash2 /></Button></AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader><AlertDialogTitle>Excluir este elemento?</AlertDialogTitle><AlertDialogDescription>Ele sairá do rascunho e será removido da vitrine depois que você salvar.</AlertDialogDescription></AlertDialogHeader>
+                              <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => removeWelcomeElement(element.id)}>Excluir elemento</AlertDialogAction></AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+
+                      <div className="welcome-editor-grid">
+                        <Field label="Tipo">
+                          <Select value={element.type} onValueChange={(value) => updateWelcomeElement(element.id, { type: value as WelcomeElement["type"] })}>
+                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                            <SelectContent><SelectItem value="text">Caixa de texto</SelectItem><SelectItem value="link">Link de recepção</SelectItem><SelectItem value="highlight">Destaque visual</SelectItem></SelectContent>
+                          </Select>
+                        </Field>
+                        <Field label="Ordem"><Input type="number" min={0} max={9999} value={element.sortOrder} onChange={(e) => updateWelcomeElement(element.id, { sortOrder: Number(e.target.value) || 0 })} /></Field>
+                        <Field label="Assinatura"><Input value={element.eyebrow} onChange={(e) => updateWelcomeElement(element.id, { eyebrow: e.target.value })} placeholder="BOAS-VINDAS" /></Field>
+                        <Field label="Título"><Input value={element.title} onChange={(e) => updateWelcomeElement(element.id, { title: e.target.value })} /></Field>
+                      </div>
+                      <Field label="Texto"><Textarea rows={4} value={element.body} onChange={(e) => updateWelcomeElement(element.id, { body: e.target.value })} /></Field>
+                      <div className="welcome-editor-grid welcome-link-grid">
+                        <Field label="Texto do link" hint={element.type === "link" ? "Obrigatório neste tipo." : "Opcional: deixe vazio para não exibir botão."}><Input value={element.linkLabel} onChange={(e) => updateWelcomeElement(element.id, { linkLabel: e.target.value })} placeholder="Conhecer agora" /></Field>
+                        <Field label="Destino do link"><Input value={element.linkUrl} onChange={(e) => updateWelcomeElement(element.id, { linkUrl: e.target.value })} placeholder="https://... ou #produtos" /></Field>
+                        <Field label="Cor de destaque"><div className="color-field"><Input type="color" value={element.accentColor} onChange={(e) => updateWelcomeElement(element.id, { accentColor: e.target.value })} /><Input value={element.accentColor} onChange={(e) => updateWelcomeElement(element.id, { accentColor: e.target.value })} /></div></Field>
+                      </div>
+                    </article>
+                  ))}
+
+                  {content.welcomeElements.length === 0 && (
+                    <div className="studio-empty welcome-editor-empty"><MessageSquareText /><h3>Nenhum elemento adicional</h3><p>Adicione textos, links ou destaques entre a abertura e os produtos.</p><Button type="button" variant="outline" onClick={addWelcomeElement}><Plus /> Criar primeiro elemento</Button></div>
+                  )}
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="products" className="studio-tab-content">
@@ -569,6 +719,21 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                   <MediaUpload accept="video/mp4,video/webm" label="Enviar vídeo (até 50 MB)" onUploaded={(url) => updateSettings("promoVideoUrl", url)} />
                 </Field>
               </div>
+
+              <div className="studio-video-card studio-audio-card">
+                <div className="category-editor-top">
+                  <div className="audio-card-title"><span><AudioLines /></span><div><strong>Trilha sonora de fundo</strong><small>MP3 em repetição contínua</small></div></div>
+                  <div className="switch-row"><Label>Ativar</Label><Switch checked={content.appearance.backgroundAudioEnabled} onCheckedChange={(checked) => updateAppearance("backgroundAudioEnabled", checked)} /></div>
+                </div>
+                <Field label="Arquivo MP3" hint="O navegador pode exigir que o visitante clique em “Ativar trilha” antes de reproduzir som.">
+                  <Input value={content.appearance.backgroundAudioUrl} onChange={(e) => updateAppearance("backgroundAudioUrl", e.target.value)} placeholder="/media/uploads/trilha.mp3" />
+                  <MediaUpload accept="audio/mpeg,audio/mp3,.mp3" label="Enviar MP3 (até 50 MB)" onUploaded={(url) => updateAppearance("backgroundAudioUrl", url)} />
+                </Field>
+                <div className="control-card audio-volume-card">
+                  <div className="control-card-heading"><span><AudioLines /></span><div><strong>Volume inicial</strong><p>O visitante também poderá pausar a trilha.</p></div></div>
+                  <div className="slider-row"><Slider value={[content.appearance.backgroundAudioVolume]} min={0} max={100} step={1} onValueChange={([value]) => updateAppearance("backgroundAudioVolume", value)} /><output>{content.appearance.backgroundAudioVolume}%</output></div>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
@@ -626,6 +791,21 @@ function newProduct(order: number): Product {
     eyebrow: "NOVA EXPERIÊNCIA", subtitle: "", description: "", imageUrl: "",
     videoUrl: "", productUrl: "", ctaLabel: "Conhecer produto", status: "coming_soon",
     accentColor: DEFAULT_CONTENT.settings.accentColor, featured: false, isVisible: true,
+    sortOrder: order,
+  };
+}
+
+function newWelcomeElement(order: number, accentColor: string): WelcomeElement {
+  return {
+    id: createId("recepcao"),
+    type: "text",
+    eyebrow: "BOAS-VINDAS",
+    title: "Uma nova ideia começa aqui.",
+    body: "Apresente uma mensagem, um convite ou uma informação importante para quem visita sua vitrine.",
+    linkLabel: "",
+    linkUrl: "",
+    accentColor,
+    isVisible: true,
     sortOrder: order,
   };
 }

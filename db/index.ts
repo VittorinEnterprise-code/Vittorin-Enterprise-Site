@@ -80,6 +80,33 @@ export async function ensureDatabaseSchema() {
           footer_text text NOT NULL,
           updated_at integer NOT NULL
         )`),
+        database.prepare(`CREATE TABLE IF NOT EXISTS appearance_settings (
+          id integer PRIMARY KEY NOT NULL,
+          interface_scale integer NOT NULL,
+          font_scale integer NOT NULL,
+          bold_text integer NOT NULL,
+          contrast integer NOT NULL,
+          custom_font_url text NOT NULL,
+          background_audio_url text NOT NULL,
+          background_audio_enabled integer NOT NULL,
+          background_audio_volume integer NOT NULL,
+          updated_at integer NOT NULL
+        )`),
+        database.prepare(`CREATE TABLE IF NOT EXISTS welcome_elements (
+          id text PRIMARY KEY NOT NULL,
+          type text NOT NULL,
+          eyebrow text NOT NULL,
+          title text NOT NULL,
+          body text NOT NULL,
+          link_label text NOT NULL,
+          link_url text NOT NULL,
+          accent_color text NOT NULL,
+          is_visible integer NOT NULL,
+          sort_order integer NOT NULL
+        )`),
+        database.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_welcome_visible_order ON welcome_elements (is_visible, sort_order)",
+        ),
       ])
       .then(() => undefined)
       .catch((error) => {

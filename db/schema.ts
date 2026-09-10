@@ -21,6 +21,38 @@ export const siteSettings = sqliteTable("site_settings", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+export const appearanceSettings = sqliteTable("appearance_settings", {
+  id: integer("id").primaryKey(),
+  interfaceScale: integer("interface_scale").notNull(),
+  fontScale: integer("font_scale").notNull(),
+  boldText: integer("bold_text", { mode: "boolean" }).notNull(),
+  contrast: integer("contrast").notNull(),
+  customFontUrl: text("custom_font_url").notNull(),
+  backgroundAudioUrl: text("background_audio_url").notNull(),
+  backgroundAudioEnabled: integer("background_audio_enabled", {
+    mode: "boolean",
+  }).notNull(),
+  backgroundAudioVolume: integer("background_audio_volume").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const welcomeElements = sqliteTable(
+  "welcome_elements",
+  {
+    id: text("id").primaryKey(),
+    type: text("type", { enum: ["text", "link", "highlight"] }).notNull(),
+    eyebrow: text("eyebrow").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    linkLabel: text("link_label").notNull(),
+    linkUrl: text("link_url").notNull(),
+    accentColor: text("accent_color").notNull(),
+    isVisible: integer("is_visible", { mode: "boolean" }).notNull(),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [index("idx_welcome_visible_order").on(table.isVisible, table.sortOrder)],
+);
+
 export const categories = sqliteTable(
   "categories",
   {

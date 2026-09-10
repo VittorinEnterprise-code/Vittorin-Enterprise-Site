@@ -1,19 +1,28 @@
 import { asc } from "drizzle-orm";
 import { ensureDatabaseSchema, getD1Binding, getDb } from "@/db";
-import { categories, products, siteSettings } from "@/db/schema";
+import {
+  appearanceSettings,
+  categories,
+  products,
+  siteSettings,
+  welcomeElements,
+} from "@/db/schema";
 import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 
 export async function loadSiteContent(): Promise<SiteContent> {
   await ensureDatabaseSchema();
   const db = getDb();
-  const [settingsRows, categoryRows, productRows] = await Promise.all([
+  const [settingsRows, appearanceRows, welcomeRows, categoryRows, productRows] = await Promise.all([
     db.select().from(siteSettings).limit(1),
+    db.select().from(appearanceSettings).limit(1),
+    db.select().from(welcomeElements).orderBy(asc(welcomeElements.sortOrder)),
     db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select().from(products).orderBy(asc(products.sortOrder), asc(products.name)),
   ]);
 
   const settings = settingsRows[0];
   if (!settings) return structuredClone(DEFAULT_CONTENT);
+  const appearance = appearanceRows[0];
 
   return {
     settings: {
@@ -34,6 +43,19 @@ export async function loadSiteContent(): Promise<SiteContent> {
       showPromoVideo: settings.showPromoVideo,
       footerText: settings.footerText,
     },
+    appearance: appearance
+      ? {
+          interfaceScale: appearance.interfaceScale,
+          fontScale: appearance.fontScale,
+          boldText: appearance.boldText,
+          contrast: appearance.contrast,
+          customFontUrl: appearance.customFontUrl,
+          backgroundAudioUrl: appearance.backgroundAudioUrl,
+          backgroundAudioEnabled: appearance.backgroundAudioEnabled,
+          backgroundAudioVolume: appearance.backgroundAudioVolume,
+        }
+      : structuredClone(DEFAULT_CONTENT.appearance),
+    welcomeElements: welcomeRows,
     categories: categoryRows,
     products: productRows,
   };
@@ -43,6 +65,7 @@ export async function saveSiteContent(content: SiteContent) {
   await ensureDatabaseSchema();
   const database = getD1Binding();
   const settings = content.settings;
+  const appearance = content.appearance;
   const statements = [
     database
       .prepare(
@@ -91,6 +114,36 @@ export async function saveSiteContent(content: SiteContent) {
         settings.footerText,
         Date.now(),
       ),
+    database
+      .prepare(
+        `INSERT INTO appearance_settings (
+          id, interface_scale, font_scale, bold_text, contrast, custom_font_url,
+          background_audio_url, background_audio_enabled, background_audio_volume, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          interface_scale = excluded.interface_scale,
+          font_scale = excluded.font_scale,
+          bold_text = excluded.bold_text,
+          contrast = excluded.contrast,
+          custom_font_url = excluded.custom_font_url,
+          background_audio_url = excluded.background_audio_url,
+          background_audio_enabled = excluded.background_audio_enabled,
+          background_audio_volume = excluded.background_audio_volume,
+          updated_at = excluded.updated_at`,
+      )
+      .bind(
+        1,
+        appearance.interfaceScale,
+        appearance.fontScale,
+        appearance.boldText ? 1 : 0,
+        appearance.contrast,
+        appearance.customFontUrl,
+        appearance.backgroundAudioUrl,
+        appearance.backgroundAudioEnabled ? 1 : 0,
+        appearance.backgroundAudioVolume,
+        Date.now(),
+      ),
+    database.prepare("DELETE FROM welcome_elements"),
     database.prepare("DELETE FROM products"),
     database.prepare("DELETE FROM categories"),
     ...content.categories.map((category) =>
@@ -107,6 +160,27 @@ export async function saveSiteContent(content: SiteContent) {
           category.description,
           category.sortOrder,
           category.isVisible ? 1 : 0,
+        ),
+    ),
+    ...content.welcomeElements.map((element) =>
+      database
+        .prepare(
+          `INSERT INTO welcome_elements (
+            id, type, eyebrow, title, body, link_label, link_url,
+            accent_color, is_visible, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          element.id,
+          element.type,
+          element.eyebrow,
+          element.title,
+          element.body,
+          element.linkLabel,
+          element.linkUrl,
+          element.accentColor,
+          element.isVisible ? 1 : 0,
+          element.sortOrder,
         ),
     ),
     ...content.products.map((product) =>

@@ -17,6 +17,30 @@ export type SiteSettings = {
   footerText: string;
 };
 
+export type AppearanceSettings = {
+  interfaceScale: number;
+  fontScale: number;
+  boldText: boolean;
+  contrast: number;
+  customFontUrl: string;
+  backgroundAudioUrl: string;
+  backgroundAudioEnabled: boolean;
+  backgroundAudioVolume: number;
+};
+
+export type WelcomeElement = {
+  id: string;
+  type: "text" | "link" | "highlight";
+  eyebrow: string;
+  title: string;
+  body: string;
+  linkLabel: string;
+  linkUrl: string;
+  accentColor: string;
+  isVisible: boolean;
+  sortOrder: number;
+};
+
 export type ProductCategory = {
   id: string;
   name: string;
@@ -47,6 +71,8 @@ export type Product = {
 
 export type SiteContent = {
   settings: SiteSettings;
+  appearance: AppearanceSettings;
+  welcomeElements: WelcomeElement[];
   categories: ProductCategory[];
   products: Product[];
 };
@@ -72,6 +98,17 @@ export const DEFAULT_CONTENT: SiteContent = {
     showPromoVideo: false,
     footerText: "Disciplina · Estratégia · Evolução",
   },
+  appearance: {
+    interfaceScale: 100,
+    fontScale: 100,
+    boldText: false,
+    contrast: 100,
+    customFontUrl: "",
+    backgroundAudioUrl: "",
+    backgroundAudioEnabled: false,
+    backgroundAudioVolume: 24,
+  },
+  welcomeElements: [],
   categories: [
     {
       id: "legal-tech",

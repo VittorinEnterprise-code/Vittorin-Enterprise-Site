@@ -22,6 +22,8 @@ export type AppearanceSettings = {
   fontScale: number;
   boldText: boolean;
   contrast: number;
+  showcaseTransparency: number;
+  showcaseBlackFade: boolean;
   customFontUrl: string;
   backgroundAudioUrl: string;
   backgroundAudioEnabled: boolean;
@@ -103,6 +105,8 @@ export const DEFAULT_CONTENT: SiteContent = {
     fontScale: 100,
     boldText: false,
     contrast: 100,
+    showcaseTransparency: 0,
+    showcaseBlackFade: false,
     customFontUrl: "",
     backgroundAudioUrl: "",
     backgroundAudioEnabled: false,

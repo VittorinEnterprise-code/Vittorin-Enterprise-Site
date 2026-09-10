@@ -531,7 +531,10 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                 <div className="appearance-grid">
                   <div className="control-card">
                     <div className="control-card-heading"><span><Maximize2 /></span><div><strong>Escala da interface</strong><p>Espaços, cartões e componentes.</p></div></div>
-                    <div className="slider-row"><Slider value={[content.appearance.interfaceScale]} min={85} max={115} step={1} onValueChange={([value]) => updateAppearance("interfaceScale", value)} /><output>{content.appearance.interfaceScale}%</output></div>
+                    <div className="slider-row"><Slider value={[content.appearance.interfaceScale]} min={60} max={160} step={1} onValueChange={([value]) => updateAppearance("interfaceScale", value)} /><output>{content.appearance.interfaceScale}%</output></div>
+                    <div className="scale-presets" aria-label="Escalas rápidas">
+                      {[60, 80, 100, 120, 140, 160].map((scale) => <Button key={scale} type="button" size="sm" variant={content.appearance.interfaceScale === scale ? "default" : "outline"} onClick={() => updateAppearance("interfaceScale", scale)}>{scale}%</Button>)}
+                    </div>
                   </div>
                   <div className="control-card">
                     <div className="control-card-heading"><span><Type /></span><div><strong>Tamanho das letras</strong><p>Ajuste independente da interface.</p></div></div>
@@ -544,6 +547,14 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                   <div className="control-card control-card-switch">
                     <div className="control-card-heading"><span><Bold /></span><div><strong>Texto em negrito</strong><p>Reforça todos os textos da vitrine.</p></div></div>
                     <Switch checked={content.appearance.boldText} onCheckedChange={(checked) => updateAppearance("boldText", checked)} aria-label="Ativar texto em negrito" />
+                  </div>
+                  <div className="control-card">
+                    <div className="control-card-heading"><span><Eye /></span><div><strong>Transparência das vitrines</strong><p>0% mantém o visual normal; 100% oculta a imagem.</p></div></div>
+                    <div className="slider-row"><Slider value={[content.appearance.showcaseTransparency]} min={0} max={100} step={1} onValueChange={([value]) => updateAppearance("showcaseTransparency", value)} /><output>{content.appearance.showcaseTransparency}%</output></div>
+                  </div>
+                  <div className="control-card control-card-switch">
+                    <div className="control-card-heading"><span><Contrast /></span><div><strong>Fade preto discreto</strong><p>Escurece suavemente o visual sem afetar os textos.</p></div></div>
+                    <Switch checked={content.appearance.showcaseBlackFade} onCheckedChange={(checked) => updateAppearance("showcaseBlackFade", checked)} aria-label="Ativar fade preto nas vitrines" />
                   </div>
                 </div>
 

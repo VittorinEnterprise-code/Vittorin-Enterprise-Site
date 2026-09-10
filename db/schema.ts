@@ -36,6 +36,13 @@ export const appearanceSettings = sqliteTable("appearance_settings", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+export const showcaseSettings = sqliteTable("showcase_settings", {
+  id: integer("id").primaryKey(),
+  transparency: integer("transparency").notNull(),
+  blackFade: integer("black_fade", { mode: "boolean" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
 export const welcomeElements = sqliteTable(
   "welcome_elements",
   {

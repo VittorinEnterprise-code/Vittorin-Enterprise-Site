@@ -28,10 +28,12 @@ export const siteContentSchema = z
       footerText: shortText,
     }),
     appearance: z.object({
-      interfaceScale: z.number().int().min(85).max(115),
+      interfaceScale: z.number().int().min(60).max(160),
       fontScale: z.number().int().min(85).max(140),
       boldText: z.boolean(),
       contrast: z.number().int().min(85).max(140),
+      showcaseTransparency: z.number().int().min(0).max(100),
+      showcaseBlackFade: z.boolean(),
       customFontUrl: mediaReference,
       backgroundAudioUrl: mediaReference,
       backgroundAudioEnabled: z.boolean(),

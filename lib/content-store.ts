@@ -4,6 +4,7 @@ import {
   appearanceSettings,
   categories,
   products,
+  showcaseSettings,
   siteSettings,
   welcomeElements,
 } from "@/db/schema";
@@ -12,9 +13,10 @@ import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 export async function loadSiteContent(): Promise<SiteContent> {
   await ensureDatabaseSchema();
   const db = getDb();
-  const [settingsRows, appearanceRows, welcomeRows, categoryRows, productRows] = await Promise.all([
+  const [settingsRows, appearanceRows, showcaseRows, welcomeRows, categoryRows, productRows] = await Promise.all([
     db.select().from(siteSettings).limit(1),
     db.select().from(appearanceSettings).limit(1),
+    db.select().from(showcaseSettings).limit(1),
     db.select().from(welcomeElements).orderBy(asc(welcomeElements.sortOrder)),
     db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select().from(products).orderBy(asc(products.sortOrder), asc(products.name)),
@@ -23,6 +25,7 @@ export async function loadSiteContent(): Promise<SiteContent> {
   const settings = settingsRows[0];
   if (!settings) return structuredClone(DEFAULT_CONTENT);
   const appearance = appearanceRows[0];
+  const showcase = showcaseRows[0];
 
   return {
     settings: {
@@ -49,6 +52,8 @@ export async function loadSiteContent(): Promise<SiteContent> {
           fontScale: appearance.fontScale,
           boldText: appearance.boldText,
           contrast: appearance.contrast,
+          showcaseTransparency: showcase?.transparency ?? DEFAULT_CONTENT.appearance.showcaseTransparency,
+          showcaseBlackFade: showcase?.blackFade ?? DEFAULT_CONTENT.appearance.showcaseBlackFade,
           customFontUrl: appearance.customFontUrl,
           backgroundAudioUrl: appearance.backgroundAudioUrl,
           backgroundAudioEnabled: appearance.backgroundAudioEnabled,
@@ -141,6 +146,22 @@ export async function saveSiteContent(content: SiteContent) {
         appearance.backgroundAudioUrl,
         appearance.backgroundAudioEnabled ? 1 : 0,
         appearance.backgroundAudioVolume,
+        Date.now(),
+      ),
+    database
+      .prepare(
+        `INSERT INTO showcase_settings (
+          id, transparency, black_fade, updated_at
+        ) VALUES (?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          transparency = excluded.transparency,
+          black_fade = excluded.black_fade,
+          updated_at = excluded.updated_at`,
+      )
+      .bind(
+        1,
+        appearance.showcaseTransparency,
+        appearance.showcaseBlackFade ? 1 : 0,
         Date.now(),
       ),
     database.prepare("DELETE FROM welcome_elements"),

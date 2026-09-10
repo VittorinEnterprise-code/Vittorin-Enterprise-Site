@@ -92,6 +92,12 @@ export async function ensureDatabaseSchema() {
           background_audio_volume integer NOT NULL,
           updated_at integer NOT NULL
         )`),
+        database.prepare(`CREATE TABLE IF NOT EXISTS showcase_settings (
+          id integer PRIMARY KEY NOT NULL,
+          transparency integer NOT NULL,
+          black_fade integer NOT NULL,
+          updated_at integer NOT NULL
+        )`),
         database.prepare(`CREATE TABLE IF NOT EXISTS welcome_elements (
           id text PRIMARY KEY NOT NULL,
           type text NOT NULL,

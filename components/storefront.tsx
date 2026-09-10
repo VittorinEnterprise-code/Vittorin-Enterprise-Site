@@ -69,13 +69,18 @@ function storefrontStyle(
   interfacePercentage: number,
   fontPercentage: number,
   contrast: number,
+  showcaseTransparency: number,
+  showcaseBlackFade: boolean,
 ) {
-  const ui = Math.min(1.15, Math.max(0.85, interfacePercentage / 100));
+  const ui = Math.min(1.6, Math.max(0.6, interfacePercentage / 100));
   const font = Math.min(1.4, Math.max(0.85, fontPercentage / 100));
+  const showcaseOpacity = Math.min(1, Math.max(0, 1 - showcaseTransparency / 100));
 
   return {
     "--brand-accent": accentColor,
     "--site-contrast": `${Math.min(140, Math.max(85, contrast))}%`,
+    "--showcase-opacity": showcaseOpacity.toFixed(2),
+    "--showcase-black-fade": showcaseBlackFade ? "0.26" : "0",
     "--font-eyebrow": scaled(0.73, font, "rem"),
     "--font-brand": scaled(0.84, font, "rem"),
     "--font-nav": scaled(0.88, font, "rem"),
@@ -318,6 +323,8 @@ export function Storefront({ content }: { content: SiteContent }) {
     appearance.interfaceScale,
     appearance.fontScale,
     appearance.contrast,
+    appearance.showcaseTransparency,
+    appearance.showcaseBlackFade,
   );
 
   const products = useMemo(

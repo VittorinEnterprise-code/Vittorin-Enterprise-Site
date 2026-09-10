@@ -240,7 +240,7 @@ export function Storefront({ content }: { content: SiteContent }) {
       <header className="site-header">
         <a className="header-brand" href="#inicio" aria-label="Vittorin Enterprise — início">
           <Image src="/brand/vittorin-mark.webp" alt="" width={38} height={38} priority />
-          <span>VITTORIN</span>
+          <span>VITTORIN ENTERPRISE</span>
         </a>
 
         <nav

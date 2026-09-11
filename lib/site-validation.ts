@@ -7,6 +7,18 @@ const longText = z.string().max(1200);
 const mediaReference = z.string().max(1200);
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+function isSafeContactReference(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("#") || trimmed.startsWith("/")) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return ["https:", "http:", "mailto:", "tel:"].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 export const siteContentSchema = z
   .object({
     settings: z.object({
@@ -39,6 +51,41 @@ export const siteContentSchema = z
       backgroundAudioEnabled: z.boolean(),
       backgroundAudioVolume: z.number().int().min(0).max(100),
     }),
+    socialSettings: z.object({
+      enabled: z.boolean(),
+      position: z.enum([
+        "bottom-right",
+        "bottom-center",
+        "bottom-left",
+        "right-center",
+        "left-center",
+      ]),
+      buttonLabel: z.string().min(1).max(40),
+    }),
+    socialLinks: z
+      .array(
+        z.object({
+          id,
+          platform: z.enum([
+            "whatsapp",
+            "instagram",
+            "youtube",
+            "facebook",
+            "linkedin",
+            "tiktok",
+            "telegram",
+            "email",
+            "website",
+            "custom",
+          ]),
+          label: z.string().min(1).max(60),
+          url: mediaReference,
+          accentColor: color,
+          isVisible: z.boolean(),
+          sortOrder: z.number().int().min(0).max(9999),
+        }),
+      )
+      .max(20),
     welcomeElements: z
       .array(
         z.object({
@@ -96,6 +143,32 @@ export const siteContentSchema = z
     const productIds = new Set<string>();
     const productSlugs = new Set<string>();
     const welcomeIds = new Set<string>();
+    const socialIds = new Set<string>();
+
+    content.socialLinks.forEach((link, index) => {
+      if (socialIds.has(link.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["socialLinks", index, "id"],
+          message: "Identificador de rede social duplicado.",
+        });
+      }
+      if (link.url.trim() && !isSafeContactReference(link.url)) {
+        context.addIssue({
+          code: "custom",
+          path: ["socialLinks", index, "url"],
+          message: "Use um link HTTPS, HTTP, mailto:, tel:, /página ou #seção.",
+        });
+      }
+      if (link.isVisible && !link.url.trim()) {
+        context.addIssue({
+          code: "custom",
+          path: ["socialLinks", index, "url"],
+          message: "Informe o link antes de tornar este contato visível.",
+        });
+      }
+      socialIds.add(link.id);
+    });
 
     content.welcomeElements.forEach((element, index) => {
       if (welcomeIds.has(element.id)) {

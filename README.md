@@ -12,6 +12,7 @@ Site-vitrine oficial da Vittorin Enterprise para aplicativos, tecnologia e inova
 - escala de interface, tamanho tipográfico, negrito, contraste e fonte personalizada;
 - transparência ajustável e fade preto opcional no card inicial de apresentação;
 - trilha MP3 opcional em loop, com controle de reprodução para o visitante;
+- menu flutuante opcional de contato com botões estilizados para redes sociais;
 - área opcional para vídeo promocional;
 - layout adaptado para desktop, tablet e celular.
 
@@ -31,6 +32,8 @@ O Estúdio permite editar:
 - fonte personalizada por upload (WOFF2, WOFF, TTF ou OTF);
 - trilha MP3 de fundo, volume inicial e reprodução em loop;
 - até 20 elementos adicionais de recepção, ordenáveis e ocultáveis.
+- até 20 canais de contato, com rede, link, cor, ordem e visibilidade independentes;
+- posição do botão de contato à direita, à esquerda ou centralizado na parte inferior.
 
 ## Dados e mídia
 

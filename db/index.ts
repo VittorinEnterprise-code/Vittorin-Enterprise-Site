@@ -98,6 +98,25 @@ export async function ensureDatabaseSchema() {
           black_fade integer NOT NULL,
           updated_at integer NOT NULL
         )`),
+        database.prepare(`CREATE TABLE IF NOT EXISTS social_contact_settings (
+          id integer PRIMARY KEY NOT NULL,
+          enabled integer NOT NULL,
+          position text NOT NULL,
+          button_label text NOT NULL,
+          updated_at integer NOT NULL
+        )`),
+        database.prepare(`CREATE TABLE IF NOT EXISTS social_links (
+          id text PRIMARY KEY NOT NULL,
+          platform text NOT NULL,
+          label text NOT NULL,
+          url text NOT NULL,
+          accent_color text NOT NULL,
+          is_visible integer NOT NULL,
+          sort_order integer NOT NULL
+        )`),
+        database.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_social_links_visible_order ON social_links (is_visible, sort_order)",
+        ),
         database.prepare(`CREATE TABLE IF NOT EXISTS welcome_elements (
           id text PRIMARY KEY NOT NULL,
           type text NOT NULL,

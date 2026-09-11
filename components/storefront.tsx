@@ -4,22 +4,27 @@ import {
   AudioLines,
   ArrowRight,
   ChevronDown,
+  ChevronUp,
   ExternalLink,
   Layers3,
   Menu,
   Pause,
   Play,
+  Share2,
   Sparkles,
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { SocialPlatformIcon } from "@/components/social-platform-icon";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   STATUS_LABELS,
   type Product,
   type SiteContent,
+  type SocialContactSettings,
+  type SocialLink,
   type WelcomeElement,
 } from "@/lib/site-content";
 
@@ -58,6 +63,20 @@ function safeLink(value: string) {
 function safeMedia(value: string) {
   const link = safeLink(value);
   return link && !link.startsWith("#") ? link : "";
+}
+
+function safeContactLink(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("#") || trimmed.startsWith("/")) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    return ["https:", "http:", "mailto:", "tel:"].includes(parsed.protocol)
+      ? trimmed
+      : "";
+  } catch {
+    return "";
+  }
 }
 
 function scaled(value: number, scale: number, unit: "rem" | "vw" | "px") {
@@ -222,6 +241,111 @@ function BackgroundAudio({ url, volume }: { url: string; volume: number }) {
   );
 }
 
+function SocialContactMenu({
+  settings,
+  links,
+  hasBackgroundAudio,
+}: {
+  settings: SocialContactSettings;
+  links: SocialLink[];
+  hasBackgroundAudio: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const visibleLinks = useMemo(
+    () =>
+      [...links]
+        .filter((link) => link.isVisible)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((link) => ({ ...link, href: safeContactLink(link.url) }))
+        .filter((link) => Boolean(link.href)),
+    [links],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  if (!settings.enabled || visibleLinks.length === 0) return null;
+
+  return (
+    <div
+      ref={containerRef}
+      className={[
+        "social-contact",
+        "social-contact-position-" + settings.position,
+        hasBackgroundAudio ? "social-contact-with-audio" : "",
+        open ? "is-open" : "",
+      ].filter(Boolean).join(" ")}
+    >
+      <div
+        className="social-contact-panel"
+        id={menuId}
+        role="menu"
+        aria-label="Redes sociais e contato"
+        aria-hidden={!open}
+      >
+        <div className="social-contact-panel-heading">
+          <span>CANAIS OFICIAIS</span>
+          <strong>Escolha como falar conosco</strong>
+        </div>
+        <div className="social-contact-links">
+          {visibleLinks.map((link) => {
+            const isExternal = link.href.startsWith("http");
+            return (
+              <a
+                key={link.id}
+                href={link.href}
+                role="menuitem"
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noreferrer" : undefined}
+                style={{ "--social-color": link.accentColor } as React.CSSProperties}
+                onClick={() => setOpen(false)}
+              >
+                <span className="social-contact-link-icon">
+                  <SocialPlatformIcon platform={link.platform} />
+                </span>
+                <span className="social-contact-link-copy">
+                  <strong>{link.label}</strong>
+                  <small>Abrir canal</small>
+                </span>
+                <ExternalLink className="social-contact-link-arrow" aria-hidden="true" />
+              </a>
+            );
+          })}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="social-contact-trigger"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="social-contact-trigger-icon"><Share2 aria-hidden="true" /></span>
+        <span>{settings.buttonLabel.trim() || "Contato"}</span>
+        <ChevronUp className="social-contact-trigger-chevron" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 function WelcomeCard({ element }: { element: WelcomeElement }) {
   const link = safeLink(element.linkUrl);
   const hasLink = Boolean(link && element.linkLabel.trim());
@@ -302,7 +426,7 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export function Storefront({ content }: { content: SiteContent }) {
-  const { settings, appearance } = content;
+  const { settings, appearance, socialSettings } = content;
   const visibleCategories = useMemo(
     () => content.categories.filter((category) => category.isVisible),
     [content.categories],
@@ -601,6 +725,12 @@ export function Storefront({ content }: { content: SiteContent }) {
         <p>{settings.footerText}</p>
         <p>© {new Date().getFullYear()} Vittorin Enterprise</p>
       </footer>
+
+      <SocialContactMenu
+        settings={socialSettings}
+        links={content.socialLinks}
+        hasBackgroundAudio={Boolean(appearance.backgroundAudioEnabled && backgroundAudioUrl)}
+      />
 
       {appearance.backgroundAudioEnabled && backgroundAudioUrl && (
         <BackgroundAudio url={backgroundAudioUrl} volume={appearance.backgroundAudioVolume} />

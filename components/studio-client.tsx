@@ -20,6 +20,7 @@ import {
   Plus,
   Save,
   Settings2,
+  Share2,
   Sparkles,
   Trash2,
   Type,
@@ -29,6 +30,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SocialPlatformIcon } from "@/components/social-platform-icon";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,12 +66,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DEFAULT_CONTENT,
+  SOCIAL_PLATFORM_COLORS,
+  SOCIAL_PLATFORM_LABELS,
   STATUS_LABELS,
   type AppearanceSettings,
   type Product,
   type ProductCategory,
   type SiteContent,
   type SiteSettings,
+  type SocialContactSettings,
+  type SocialLink,
+  type SocialPlatform,
   type WelcomeElement,
 } from "@/lib/site-content";
 
@@ -84,6 +91,8 @@ type MediaUploadProps = {
   label: string;
   onUploaded: (url: string) => void;
 };
+
+const SOCIAL_PLATFORMS = Object.keys(SOCIAL_PLATFORM_LABELS) as SocialPlatform[];
 
 function slugify(value: string) {
   return value
@@ -227,6 +236,10 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
           execute: () => ({
             settings: content.settings,
             appearance: content.appearance,
+            socialMenu: {
+              enabled: content.socialSettings.enabled,
+              links: content.socialLinks.length,
+            },
             welcomeElements: content.welcomeElements.length,
             categories: content.categories.length,
             products: content.products.length,
@@ -301,6 +314,60 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
     setContent((current) =>
       current
         ? { ...current, appearance: { ...current.appearance, [key]: value } }
+        : current,
+    );
+  };
+
+  const updateSocialSettings = <K extends keyof SocialContactSettings>(
+    key: K,
+    value: SocialContactSettings[K],
+  ) => {
+    setContent((current) =>
+      current
+        ? { ...current, socialSettings: { ...current.socialSettings, [key]: value } }
+        : current,
+    );
+  };
+
+  const updateSocialLink = (id: string, patch: Partial<SocialLink>) => {
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            socialLinks: current.socialLinks.map((link) =>
+              link.id === id ? { ...link, ...patch } : link,
+            ),
+          }
+        : current,
+    );
+  };
+
+  const changeSocialPlatform = (id: string, platform: SocialPlatform) => {
+    updateSocialLink(id, {
+      platform,
+      label: SOCIAL_PLATFORM_LABELS[platform],
+      accentColor: SOCIAL_PLATFORM_COLORS[platform],
+    });
+  };
+
+  const removeSocialLink = (id: string) => {
+    setContent((current) =>
+      current
+        ? { ...current, socialLinks: current.socialLinks.filter((link) => link.id !== id) }
+        : current,
+    );
+  };
+
+  const addSocialLink = () => {
+    setContent((current) =>
+      current
+        ? {
+            ...current,
+            socialLinks: [
+              ...current.socialLinks,
+              newSocialLink(current.socialLinks.length, current.settings.accentColor),
+            ],
+          }
         : current,
     );
   };
@@ -465,6 +532,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
           <Tabs defaultValue="identity" className="studio-tabs">
             <TabsList className="studio-tabs-list">
               <TabsTrigger value="identity"><Palette /> Identidade</TabsTrigger>
+              <TabsTrigger value="contact"><Share2 /> Contato & redes</TabsTrigger>
               <TabsTrigger value="products"><Boxes /> Produtos</TabsTrigger>
               <TabsTrigger value="categories"><Layers3 /> Categorias</TabsTrigger>
               <TabsTrigger value="media"><MonitorPlay /> Mídia & layout</TabsTrigger>
@@ -617,6 +685,203 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
 
                   {content.welcomeElements.length === 0 && (
                     <div className="studio-empty welcome-editor-empty"><MessageSquareText /><h3>Nenhum elemento adicional</h3><p>Adicione textos, links ou destaques entre a abertura e os produtos.</p><Button type="button" variant="outline" onClick={addWelcomeElement}><Plus /> Criar primeiro elemento</Button></div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="contact" className="studio-tab-content">
+              <div className="studio-section-heading">
+                <div><p className="eyebrow">CONTATO</p><h2>Redes sociais</h2></div>
+                <p>Crie um menu flutuante elegante para reunir WhatsApp, Instagram, YouTube e outros canais.</p>
+              </div>
+
+              <div className="social-settings-card">
+                <div className="social-settings-heading">
+                  <div className="social-settings-title">
+                    <span><Share2 /></span>
+                    <div>
+                      <strong>Botão flutuante de contato</strong>
+                      <small>O menu só aparece quando estiver ativo e tiver ao menos um link visível.</small>
+                    </div>
+                  </div>
+                  <div className="switch-row">
+                    <Label>Ativar</Label>
+                    <Switch
+                      checked={content.socialSettings.enabled}
+                      onCheckedChange={(checked) => updateSocialSettings("enabled", checked)}
+                      aria-label="Ativar botão flutuante de contato"
+                    />
+                  </div>
+                </div>
+
+                <div className="studio-form-grid social-settings-grid">
+                  <Field label="Texto do botão" hint="Exemplo: Contato, Fale conosco ou Redes.">
+                    <Input
+                      value={content.socialSettings.buttonLabel}
+                      onChange={(event) => updateSocialSettings("buttonLabel", event.target.value)}
+                      maxLength={40}
+                    />
+                  </Field>
+                  <Field label="Posição na tela">
+                    <Select
+                      value={content.socialSettings.position}
+                      onValueChange={(value) =>
+                        updateSocialSettings(
+                          "position",
+                          value as SocialContactSettings["position"],
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bottom-right">Embaixo à direita</SelectItem>
+                        <SelectItem value="bottom-center">Embaixo no centro</SelectItem>
+                        <SelectItem value="bottom-left">Embaixo à esquerda</SelectItem>
+                        <SelectItem value="right-center">Lateral direita</SelectItem>
+                        <SelectItem value="left-center">Lateral esquerda</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+              </div>
+
+              <div className="studio-subsection">
+                <div className="studio-section-heading studio-section-heading-compact">
+                  <div><p className="eyebrow">CANAIS</p><h2>Links de contato</h2></div>
+                  <Button
+                    type="button"
+                    onClick={addSocialLink}
+                    disabled={content.socialLinks.length >= 20}
+                  >
+                    <Plus /> Adicionar rede
+                  </Button>
+                </div>
+
+                <div className="social-editor-list">
+                  {content.socialLinks.map((link, index) => (
+                    <article className="social-editor" key={link.id}>
+                      <div className="social-editor-heading">
+                        <div className="social-editor-title">
+                          <span style={{ "--social-preview-color": link.accentColor } as React.CSSProperties}>
+                            <SocialPlatformIcon platform={link.platform} />
+                          </span>
+                          <div>
+                            <strong>{link.label || "Contato " + (index + 1)}</strong>
+                            <small>{SOCIAL_PLATFORM_LABELS[link.platform]} · Ordem {link.sortOrder}</small>
+                          </div>
+                        </div>
+                        <div className="social-editor-actions">
+                          <div className="switch-row">
+                            <Label>Visível</Label>
+                            <Switch
+                              checked={link.isVisible}
+                              onCheckedChange={(checked) => {
+                                if (checked && !link.url.trim()) {
+                                  toast.error("Informe o link deste contato antes de torná-lo visível.");
+                                  return;
+                                }
+                                updateSocialLink(link.id, { isVisible: checked });
+                              }}
+                              aria-label={"Exibir " + link.label}
+                            />
+                          </div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button type="button" variant="ghost" size="icon-sm" aria-label={"Excluir " + link.label}>
+                                <Trash2 />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir “{link.label}”?</AlertDialogTitle>
+                                <AlertDialogDescription>Este canal sairá do rascunho e será removido do menu depois que você salvar.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => removeSocialLink(link.id)}>Excluir contato</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+
+                      <div className="social-editor-grid">
+                        <Field label="Rede ou canal">
+                          <Select
+                            value={link.platform}
+                            onValueChange={(value) => changeSocialPlatform(link.id, value as SocialPlatform)}
+                          >
+                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {SOCIAL_PLATFORMS.map((platform) => (
+                                <SelectItem key={platform} value={platform}>
+                                  {SOCIAL_PLATFORM_LABELS[platform]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <Field label="Nome exibido">
+                          <Input
+                            value={link.label}
+                            onChange={(event) => updateSocialLink(link.id, { label: event.target.value })}
+                            maxLength={60}
+                          />
+                        </Field>
+                        <Field label="Ordem">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={9999}
+                            value={link.sortOrder}
+                            onChange={(event) =>
+                              updateSocialLink(link.id, { sortOrder: Number(event.target.value) || 0 })
+                            }
+                          />
+                        </Field>
+                      </div>
+                      <div className="social-editor-grid social-link-grid">
+                        <Field
+                          label="Link de destino"
+                          hint={link.platform === "whatsapp"
+                            ? "Use https://wa.me/ seguido do número com DDI e DDD."
+                            : link.platform === "email"
+                              ? "Use mailto:voce@dominio.com."
+                              : "Use o link completo do seu perfil ou canal."}
+                        >
+                          <Input
+                            value={link.url}
+                            onChange={(event) => updateSocialLink(link.id, { url: event.target.value })}
+                            placeholder={link.platform === "whatsapp" ? "https://wa.me/55..." : "https://..."}
+                          />
+                        </Field>
+                        <Field label="Cor do botão">
+                          <div className="color-field">
+                            <Input
+                              type="color"
+                              value={link.accentColor}
+                              onChange={(event) => updateSocialLink(link.id, { accentColor: event.target.value })}
+                            />
+                            <Input
+                              value={link.accentColor}
+                              onChange={(event) => updateSocialLink(link.id, { accentColor: event.target.value })}
+                            />
+                          </div>
+                        </Field>
+                      </div>
+                    </article>
+                  ))}
+
+                  {content.socialLinks.length === 0 && (
+                    <div className="studio-empty social-editor-empty">
+                      <Share2 />
+                      <h3>Nenhum contato configurado</h3>
+                      <p>Adicione WhatsApp, Instagram, YouTube ou qualquer outro canal.</p>
+                      <Button type="button" variant="outline" onClick={addSocialLink}>
+                        <Plus /> Adicionar primeiro contato
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -817,6 +1082,18 @@ function newWelcomeElement(order: number, accentColor: string): WelcomeElement {
     linkUrl: "",
     accentColor,
     isVisible: true,
+    sortOrder: order,
+  };
+}
+
+function newSocialLink(order: number, accentColor: string): SocialLink {
+  return {
+    id: createId("contato"),
+    platform: "custom",
+    label: "Novo contato",
+    url: "",
+    accentColor,
+    isVisible: false,
     sortOrder: order,
   };
 }

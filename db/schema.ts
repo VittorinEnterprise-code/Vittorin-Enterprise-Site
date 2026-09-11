@@ -43,6 +43,43 @@ export const showcaseSettings = sqliteTable("showcase_settings", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+export const socialContactSettings = sqliteTable("social_contact_settings", {
+  id: integer("id").primaryKey(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull(),
+  position: text("position", {
+    enum: ["bottom-right", "bottom-center", "bottom-left", "right-center", "left-center"],
+  }).notNull(),
+  buttonLabel: text("button_label").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const socialLinks = sqliteTable(
+  "social_links",
+  {
+    id: text("id").primaryKey(),
+    platform: text("platform", {
+      enum: [
+        "whatsapp",
+        "instagram",
+        "youtube",
+        "facebook",
+        "linkedin",
+        "tiktok",
+        "telegram",
+        "email",
+        "website",
+        "custom",
+      ],
+    }).notNull(),
+    label: text("label").notNull(),
+    url: text("url").notNull(),
+    accentColor: text("accent_color").notNull(),
+    isVisible: integer("is_visible", { mode: "boolean" }).notNull(),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [index("idx_social_links_visible_order").on(table.isVisible, table.sortOrder)],
+);
+
 export const welcomeElements = sqliteTable(
   "welcome_elements",
   {

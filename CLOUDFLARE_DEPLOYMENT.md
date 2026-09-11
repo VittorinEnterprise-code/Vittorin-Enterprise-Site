@@ -3,7 +3,7 @@
 Este projeto usa quatro recursos independentes da conta:
 
 - **Workers** para o site e o Estúdio;
-- **D1** para textos, aparência, elementos de recepção, categorias e produtos;
+- **D1** para textos, aparência, redes sociais, elementos de recepção, categorias e produtos;
 - **R2** para imagens, vídeos, MP3 e fontes enviados;
 - **Cloudflare Access** para restringir `/studio*` ao e-mail `vittorinoenterprise@gmail.com`.
 
@@ -70,5 +70,6 @@ Após o primeiro deploy, abra o Worker, adicione o domínio escolhido em **Setti
 - Acesse `/studio`: o Cloudflare Access deve pedir autenticação.
 - Entre com `vittorinoenterprise@gmail.com`.
 - Salve uma alteração, recarregue a página e confirme a persistência no D1.
+- Ative um canal em **Contato & redes**, salve e confirme o botão flutuante na vitrine.
 - Envie uma imagem pequena e confirme que ela reaparece na vitrine a partir do R2.
 - Teste uma fonte WOFF2 e um MP3 curto; se o áudio não iniciar sozinho, clique em **Ativar trilha**, comportamento esperado em navegadores que bloqueiam autoplay com som.

@@ -5,6 +5,8 @@ import {
   categories,
   products,
   showcaseSettings,
+  socialContactSettings,
+  socialLinks,
   siteSettings,
   welcomeElements,
 } from "@/db/schema";
@@ -13,10 +15,21 @@ import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 export async function loadSiteContent(): Promise<SiteContent> {
   await ensureDatabaseSchema();
   const db = getDb();
-  const [settingsRows, appearanceRows, showcaseRows, welcomeRows, categoryRows, productRows] = await Promise.all([
+  const [
+    settingsRows,
+    appearanceRows,
+    showcaseRows,
+    socialSettingsRows,
+    socialLinkRows,
+    welcomeRows,
+    categoryRows,
+    productRows,
+  ] = await Promise.all([
     db.select().from(siteSettings).limit(1),
     db.select().from(appearanceSettings).limit(1),
     db.select().from(showcaseSettings).limit(1),
+    db.select().from(socialContactSettings).limit(1),
+    db.select().from(socialLinks).orderBy(asc(socialLinks.sortOrder), asc(socialLinks.label)),
     db.select().from(welcomeElements).orderBy(asc(welcomeElements.sortOrder)),
     db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select().from(products).orderBy(asc(products.sortOrder), asc(products.name)),
@@ -26,6 +39,7 @@ export async function loadSiteContent(): Promise<SiteContent> {
   if (!settings) return structuredClone(DEFAULT_CONTENT);
   const appearance = appearanceRows[0];
   const showcase = showcaseRows[0];
+  const social = socialSettingsRows[0];
 
   return {
     settings: {
@@ -60,6 +74,16 @@ export async function loadSiteContent(): Promise<SiteContent> {
           backgroundAudioVolume: appearance.backgroundAudioVolume,
         }
       : structuredClone(DEFAULT_CONTENT.appearance),
+    socialSettings: social
+      ? {
+          enabled: social.enabled,
+          position: social.position,
+          buttonLabel: social.buttonLabel,
+        }
+      : structuredClone(DEFAULT_CONTENT.socialSettings),
+    socialLinks: social
+      ? socialLinkRows
+      : structuredClone(DEFAULT_CONTENT.socialLinks),
     welcomeElements: welcomeRows,
     categories: categoryRows,
     products: productRows,
@@ -71,6 +95,7 @@ export async function saveSiteContent(content: SiteContent) {
   const database = getD1Binding();
   const settings = content.settings;
   const appearance = content.appearance;
+  const social = content.socialSettings;
   const statements = [
     database
       .prepare(
@@ -164,6 +189,25 @@ export async function saveSiteContent(content: SiteContent) {
         appearance.showcaseBlackFade ? 1 : 0,
         Date.now(),
       ),
+    database
+      .prepare(
+        `INSERT INTO social_contact_settings (
+          id, enabled, position, button_label, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          enabled = excluded.enabled,
+          position = excluded.position,
+          button_label = excluded.button_label,
+          updated_at = excluded.updated_at`,
+      )
+      .bind(
+        1,
+        social.enabled ? 1 : 0,
+        social.position,
+        social.buttonLabel,
+        Date.now(),
+      ),
+    database.prepare("DELETE FROM social_links"),
     database.prepare("DELETE FROM welcome_elements"),
     database.prepare("DELETE FROM products"),
     database.prepare("DELETE FROM categories"),
@@ -202,6 +246,23 @@ export async function saveSiteContent(content: SiteContent) {
           element.accentColor,
           element.isVisible ? 1 : 0,
           element.sortOrder,
+        ),
+    ),
+    ...content.socialLinks.map((link) =>
+      database
+        .prepare(
+          `INSERT INTO social_links (
+            id, platform, label, url, accent_color, is_visible, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          link.id,
+          link.platform,
+          link.label,
+          link.url,
+          link.accentColor,
+          link.isVisible ? 1 : 0,
+          link.sortOrder,
         ),
     ),
     ...content.products.map((product) =>

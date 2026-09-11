@@ -20,6 +20,14 @@ import { SocialPlatformIcon } from "@/components/social-platform-icon";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   STATUS_LABELS,
   type Product,
   type SiteContent,
@@ -163,8 +171,14 @@ function storefrontStyle(
 function getEmbedUrl(url: string) {
   try {
     const parsed = new URL(url);
-    if (parsed.hostname.includes("youtube.com")) {
-      const id = parsed.searchParams.get("v");
+    if (
+      parsed.hostname === "youtube.com" ||
+      parsed.hostname.endsWith(".youtube.com") ||
+      parsed.hostname.endsWith(".youtube-nocookie.com")
+    ) {
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      const supportedPath = ["embed", "shorts", "live"].includes(segments[0] ?? "");
+      const id = parsed.searchParams.get("v") || (supportedPath ? segments[1] : "");
       return id ? `https://www.youtube.com/embed/${id}` : "";
     }
     if (parsed.hostname === "youtu.be") {
@@ -371,6 +385,7 @@ function WelcomeCard({ element }: { element: WelcomeElement }) {
 
 function ProductCard({ product }: { product: Product }) {
   const productLink = safeLink(product.productUrl);
+  const teaserUrl = safeMedia(product.videoUrl);
 
   return (
     <article
@@ -392,7 +407,7 @@ function ProductCard({ product }: { product: Product }) {
           </div>
         )}
         <span className="product-status">{STATUS_LABELS[product.status]}</span>
-        {product.videoUrl && (
+        {teaserUrl && (
           <span className="product-video-indicator" title="Este produto possui vídeo">
             <Play aria-hidden="true" />
           </span>
@@ -404,22 +419,50 @@ function ProductCard({ product }: { product: Product }) {
         <h3>{product.name}</h3>
         <p className="product-subtitle">{product.subtitle}</p>
         <p className="product-description">{product.description}</p>
-        {productLink ? (
-          <a
-            className="product-link"
-            href={productLink}
-            target={productLink.startsWith("http") ? "_blank" : undefined}
-            rel={productLink.startsWith("http") ? "noreferrer" : undefined}
-          >
-            {product.ctaLabel}
-            <ExternalLink aria-hidden="true" />
-          </a>
-        ) : (
-          <span className="product-link product-link-disabled">
-            {product.ctaLabel}
-            <ArrowRight aria-hidden="true" />
-          </span>
-        )}
+        <div className="product-actions">
+          {productLink ? (
+            <a
+              className="product-link"
+              href={productLink}
+              target={productLink.startsWith("http") ? "_blank" : undefined}
+              rel={productLink.startsWith("http") ? "noreferrer" : undefined}
+            >
+              {product.ctaLabel}
+              <ExternalLink aria-hidden="true" />
+            </a>
+          ) : (
+            <span className="product-link product-link-disabled">
+              {product.ctaLabel}
+              <ArrowRight aria-hidden="true" />
+            </span>
+          )}
+
+          {teaserUrl && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <button type="button" className="product-teaser-button">
+                  <Play aria-hidden="true" />
+                  Assistir teaser
+                </button>
+              </DialogTrigger>
+              <DialogContent
+                className="product-teaser-dialog"
+                style={{ "--brand-accent": product.accentColor } as React.CSSProperties}
+              >
+                <DialogHeader className="product-teaser-heading">
+                  <p className="eyebrow">TEASER DO PRODUTO</p>
+                  <DialogTitle>{product.name}</DialogTitle>
+                  {product.subtitle && (
+                    <DialogDescription>{product.subtitle}</DialogDescription>
+                  )}
+                </DialogHeader>
+                <div className="product-teaser-frame">
+                  <PromoMedia url={teaserUrl} title={`Teaser de ${product.name}`} />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
     </article>
   );

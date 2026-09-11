@@ -1042,7 +1042,35 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                 <Field label="Cor"><div className="color-field"><Input type="color" value={productDraft.accentColor} onChange={(e) => setProductDraft({ ...productDraft, accentColor: e.target.value })} /><Input value={productDraft.accentColor} onChange={(e) => setProductDraft({ ...productDraft, accentColor: e.target.value })} /></div></Field>
               </div>
               <Field label="Imagem do produto"><Input value={productDraft.imageUrl} onChange={(e) => setProductDraft({ ...productDraft, imageUrl: e.target.value })} /><MediaUpload accept="image/jpeg,image/png,image/webp,image/gif" label="Enviar imagem do produto" onUploaded={(url) => setProductDraft((draft) => draft ? { ...draft, imageUrl: url } : draft)} /></Field>
-              <Field label="Vídeo do produto (opcional)"><Input value={productDraft.videoUrl} onChange={(e) => setProductDraft({ ...productDraft, videoUrl: e.target.value })} /></Field>
+              <Field
+                label="Vídeo teaser do produto (opcional)"
+                hint="Aceita MP4, WebM, YouTube ou Vimeo. Este vídeo pertence somente a este produto."
+              >
+                <Input
+                  value={productDraft.videoUrl}
+                  onChange={(e) => setProductDraft({ ...productDraft, videoUrl: e.target.value })}
+                  placeholder="https://youtube.com/... ou /media/uploads/teaser.mp4"
+                />
+                <div className="inline-upload-actions">
+                  <MediaUpload
+                    accept="video/mp4,video/webm"
+                    label="Enviar teaser (até 50 MB)"
+                    onUploaded={(url) =>
+                      setProductDraft((draft) => draft ? { ...draft, videoUrl: url } : draft)
+                    }
+                  />
+                  {productDraft.videoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setProductDraft({ ...productDraft, videoUrl: "" })}
+                    >
+                      Remover teaser
+                    </Button>
+                  )}
+                </div>
+              </Field>
               <div className="studio-form-grid product-form-grid">
                 <Field label="Link do produto"><Input value={productDraft.productUrl} onChange={(e) => setProductDraft({ ...productDraft, productUrl: e.target.value })} /></Field>
                 <Field label="Texto do botão"><Input value={productDraft.ctaLabel} onChange={(e) => setProductDraft({ ...productDraft, ctaLabel: e.target.value })} /></Field>

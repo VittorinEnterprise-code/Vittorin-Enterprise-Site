@@ -7,7 +7,7 @@ Site-vitrine oficial da Vittorin Enterprise para aplicativos, tecnologia e inova
 - identidade visual responsiva inspirada na marca metálica Vittorin;
 - modos claro, escuro e preferência do sistema;
 - vitrines filtráveis por categoria;
-- cartões de produto com imagem, status, descrição e link externo;
+- cartões de produto com imagem, status, descrição, link externo e teaser individual em vídeo;
 - blocos adicionais de recepção com textos, links e destaques;
 - escala de interface, tamanho tipográfico, negrito, contraste e fonte personalizada;
 - transparência ajustável e fade preto opcional no card inicial de apresentação;
@@ -24,6 +24,7 @@ O Estúdio permite editar:
 
 - títulos, subtítulos, avisos, botões, links, cores, logo e imagem principal;
 - produtos, ordem, categoria, status, visibilidade e destaque;
+- vídeo teaser individual por produto, via upload, YouTube ou Vimeo;
 - categorias, descrições, endereços e ordem;
 - número de colunas da vitrine;
 - vídeo promocional por upload ou URL;

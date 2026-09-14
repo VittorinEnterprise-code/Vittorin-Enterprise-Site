@@ -49,7 +49,7 @@ export default async function StudioPage() {
 
   return (
     <StudioClient
-      adminName={access.user.fullName ?? "Miguel Vittorino"}
+      adminName={access.user.fullName ?? "Vittorin Enterprise"}
       adminEmail={access.user.email}
       signOutPath={CLOUDFLARE_ACCESS_LOGOUT_PATH}
     />

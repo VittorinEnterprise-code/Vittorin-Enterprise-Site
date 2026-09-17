@@ -1,5 +1,6 @@
 import {
   getCloudflareAccessUser,
+  isSitesAuthenticatedRequest,
   type CloudflareAccessUser,
 } from "@/lib/cloudflare-access";
 
@@ -17,6 +18,12 @@ export async function getAuthorizedAdmin(): Promise<AdminAccessResult> {
   if (identity.reason) return identity;
 
   const { user } = identity;
+  // In the private Sites environment, the Site access policy is the admin
+  // boundary. Production continues to require the Cloudflare Access e-mail.
+  if (await isSitesAuthenticatedRequest()) {
+    return { user, reason: null };
+  }
+
   if (user.email.trim().toLowerCase() !== ADMIN_EMAIL) {
     return { user, reason: "forbidden" as const };
   }

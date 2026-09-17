@@ -18,6 +18,12 @@ export type SiteSettings = {
 };
 
 export type AppearanceSettings = {
+  themeEnabled: boolean;
+  themePreset: "juris" | "graphite" | "custom";
+  themeCustomBackground: string;
+  themeCustomSurface: string;
+  themeCustomText: string;
+  themeCustomAccent: string;
   interfaceScale: number;
   fontScale: number;
   boldText: boolean;
@@ -102,6 +108,10 @@ export type Product = {
   status: "available" | "coming_soon" | "development";
   accentColor: string;
   featured: boolean;
+  sellerBadge: boolean;
+  bestSellerBadge: boolean;
+  promotionBadge: boolean;
+  promotionPercent: number;
   isVisible: boolean;
   sortOrder: number;
 };
@@ -164,6 +174,12 @@ export const DEFAULT_CONTENT: SiteContent = {
     footerText: "Disciplina · Estratégia · Evolução",
   },
   appearance: {
+    themeEnabled: false,
+    themePreset: "juris",
+    themeCustomBackground: "#101820",
+    themeCustomSurface: "#1A2A36",
+    themeCustomText: "#F2F7FA",
+    themeCustomAccent: "#63B6D9",
     interfaceScale: 100,
     fontScale: 100,
     boldText: false,
@@ -237,6 +253,10 @@ export const DEFAULT_CONTENT: SiteContent = {
       status: "development",
       accentColor: "#cbb89d",
       featured: true,
+      sellerBadge: false,
+      bestSellerBadge: false,
+      promotionBadge: false,
+      promotionPercent: 10,
       isVisible: true,
       sortOrder: 0,
     },

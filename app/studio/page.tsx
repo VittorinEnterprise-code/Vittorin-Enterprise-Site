@@ -2,12 +2,19 @@ import { LockKeyhole } from "lucide-react";
 import { StudioClient } from "@/components/studio-client";
 import { Button } from "@/components/ui/button";
 import { getAuthorizedAdmin } from "@/lib/admin";
-import { CLOUDFLARE_ACCESS_LOGOUT_PATH } from "@/lib/cloudflare-access";
+import {
+  CLOUDFLARE_ACCESS_LOGOUT_PATH,
+  isSitesAuthenticatedRequest,
+} from "@/lib/cloudflare-access";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudioPage() {
   const access = await getAuthorizedAdmin();
+  const siteSession = await isSitesAuthenticatedRequest();
+  const signOutPath = siteSession
+    ? "/signout-with-chatgpt?return_to=%2F"
+    : CLOUDFLARE_ACCESS_LOGOUT_PATH;
 
   if (access.reason) {
     const misconfigured = access.reason === "misconfigured";
@@ -36,7 +43,7 @@ export default async function StudioPage() {
           </p>
           <Button asChild variant="outline">
             <a
-              href={access.reason === "forbidden" ? CLOUDFLARE_ACCESS_LOGOUT_PATH : "/"}
+              href={access.reason === "forbidden" ? signOutPath : "/"}
               target="_top"
             >
               {access.reason === "forbidden" ? "Sair e trocar de conta" : "Voltar à vitrine"}
@@ -51,7 +58,7 @@ export default async function StudioPage() {
     <StudioClient
       adminName={access.user.fullName ?? "Vittorin Enterprise"}
       adminEmail={access.user.email}
-      signOutPath={CLOUDFLARE_ACCESS_LOGOUT_PATH}
+      signOutPath={signOutPath}
     />
   );
 }

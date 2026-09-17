@@ -35,6 +35,7 @@ import {
   type SocialLink,
   type WelcomeElement,
 } from "@/lib/site-content";
+import { darkInkFor, getStorefrontPalette, hexRgbTriplet } from "@/lib/theme-palettes";
 
 type ModelContext = {
   registerTool: (
@@ -390,7 +391,7 @@ function ProductCard({ product }: { product: Product }) {
   return (
     <article
       className={`product-card group ${product.featured ? "product-card-featured" : ""}`}
-      style={{ "--product-accent": product.accentColor } as React.CSSProperties}
+      style={{ "--product-accent": product.accentColor, "--product-accent-ink": darkInkFor(product.accentColor) } as React.CSSProperties}
     >
       <div className="product-visual">
         {product.imageUrl ? (
@@ -407,6 +408,13 @@ function ProductCard({ product }: { product: Product }) {
           </div>
         )}
         <span className="product-status">{STATUS_LABELS[product.status]}</span>
+        {(product.sellerBadge || product.bestSellerBadge || product.promotionBadge) && (
+          <div className="product-badges" aria-label="Destaques do produto">
+            {product.sellerBadge && <span className="product-badge">Produto Seller</span>}
+            {product.bestSellerBadge && <span className="product-badge">Mais vendido</span>}
+            {product.promotionBadge && <span className="product-badge product-badge-promotion">Promoção −{product.promotionPercent}%</span>}
+          </div>
+        )}
         {teaserUrl && (
           <span className="product-video-indicator" title="Este produto possui vídeo">
             <Play aria-hidden="true" />
@@ -490,14 +498,34 @@ export function Storefront({ content }: { content: SiteContent }) {
 
   const customFontUrl = safeMedia(appearance.customFontUrl);
   const backgroundAudioUrl = safeMedia(appearance.backgroundAudioUrl);
-  const visualStyle = storefrontStyle(
-    settings.accentColor,
-    appearance.interfaceScale,
-    appearance.fontScale,
-    appearance.contrast,
-    appearance.showcaseTransparency,
-    appearance.showcaseBlackFade,
-  );
+  const palette = getStorefrontPalette(appearance);
+  const visualStyle: React.CSSProperties = {
+    ...storefrontStyle(
+      settings.accentColor,
+      appearance.interfaceScale,
+      appearance.fontScale,
+      appearance.contrast,
+      appearance.showcaseTransparency,
+      appearance.showcaseBlackFade,
+    ),
+    ...(palette ? {
+      "--page-surface": palette.background,
+      "--soft-surface": `color-mix(in srgb, ${palette.surface} 56%, ${palette.background})`,
+      "--panel-surface": palette.surface,
+      "--ink": palette.text,
+      "--ink-soft": `color-mix(in srgb, ${palette.text} 68%, ${palette.background})`,
+      "--hairline": `color-mix(in srgb, ${palette.text} 18%, transparent)`,
+      "--header-surface": `color-mix(in srgb, ${palette.background} 86%, transparent)`,
+      "--brand-accent": palette.accent,
+      "--theme-hero-background": palette.background,
+      "--theme-hero-card-rgb": hexRgbTriplet(palette.background),
+      "--theme-cta-start": `color-mix(in srgb, ${palette.accent} 75%, ${palette.text})`,
+      "--theme-cta-end": palette.accent,
+      "--theme-cta-ink": darkInkFor(palette.accent),
+      "--theme-product-start": palette.surface,
+      "--theme-product-end": palette.background,
+    } : {}),
+  } as React.CSSProperties;
 
   const products = useMemo(
     () =>
@@ -617,7 +645,7 @@ export function Storefront({ content }: { content: SiteContent }) {
         </nav>
 
         <div className="header-actions">
-          <ThemeToggle compact />
+          {!palette && <ThemeToggle compact />}
           <Button asChild className="header-cta">
             <a href="#produtos">Ver produtos <ArrowRight aria-hidden="true" /></a>
           </Button>

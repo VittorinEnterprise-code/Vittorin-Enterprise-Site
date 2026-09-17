@@ -8,6 +8,20 @@
       "when": 1789012406241,
       "tag": "0000_flowery_maestro",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789629103975,
+      "tag": "0001_solid_invisible_woman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789675528968,
+      "tag": "0002_breezy_baron_strucker",
+      "breakpoints": true
     }
   ]
 }

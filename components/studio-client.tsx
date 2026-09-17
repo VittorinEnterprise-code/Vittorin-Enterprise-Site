@@ -79,6 +79,7 @@ import {
   type SocialPlatform,
   type WelcomeElement,
 } from "@/lib/site-content";
+import { THEME_PRESETS } from "@/lib/theme-palettes";
 
 type StudioClientProps = {
   adminName: string;
@@ -592,6 +593,43 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
 
               <div className="studio-subsection">
                 <div className="studio-section-heading studio-section-heading-compact">
+                  <div><p className="eyebrow">TEMAS DA VITRINE</p><h2>Paletas alternativas</h2></div>
+                  <div className="theme-activation"><Label htmlFor="theme-enabled">{content.appearance.themeEnabled ? "Ativado" : "Desativado"}</Label><Switch id="theme-enabled" checked={content.appearance.themeEnabled} onCheckedChange={(checked) => updateAppearance("themeEnabled", checked)} /></div>
+                </div>
+                <p className="theme-help">Ao desativar, o site volta à identidade atual. O tema escolhido e suas cores ficam salvos para reutilização.</p>
+                <div className="theme-preset-grid" role="group" aria-label="Escolher tema da vitrine">
+                  {(["juris", "graphite", "custom"] as const).map((preset) => {
+                    const option = THEME_PRESETS[preset];
+                    const colors = preset === "custom"
+                      ? [content.appearance.themeCustomBackground, content.appearance.themeCustomSurface, content.appearance.themeCustomAccent]
+                      : [THEME_PRESETS[preset].background, THEME_PRESETS[preset].surface, THEME_PRESETS[preset].accent];
+                    return (
+                      <button key={preset} type="button" className={`theme-preset ${content.appearance.themeEnabled && content.appearance.themePreset === preset ? "theme-preset-active" : ""}`} aria-pressed={content.appearance.themeEnabled && content.appearance.themePreset === preset} onClick={() => setContent((current) => current ? { ...current, appearance: { ...current.appearance, themePreset: preset, themeEnabled: true } } : current)}>
+                        <span className="theme-preset-swatches" aria-hidden="true">{colors.map((hex, index) => <i key={index} style={{ background: hex }} />)}</span>
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+                {content.appearance.themePreset === "custom" && (
+                  <div className="theme-custom-grid">
+                    {([
+                      ["themeCustomBackground", "Fundo"],
+                      ["themeCustomSurface", "Cartões"],
+                      ["themeCustomText", "Texto"],
+                      ["themeCustomAccent", "Destaque e botões"],
+                    ] as const).map(([key, label]) => (
+                      <Field key={key} label={label}>
+                        <div className="color-field"><Input type="color" value={content.appearance[key]} onChange={(event) => updateAppearance(key, event.target.value)} /><Input value={content.appearance[key]} onChange={(event) => updateAppearance(key, event.target.value)} aria-label={`${label} em hexadecimal`} /></div>
+                      </Field>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="studio-subsection">
+                <div className="studio-section-heading studio-section-heading-compact">
                   <div><p className="eyebrow">APARÊNCIA</p><h2>Escala e tipografia</h2></div>
                   <p>Estes ajustes afetam apenas a vitrine pública. O Estúdio mantém seu tamanho normal.</p>
                 </div>
@@ -1079,6 +1117,15 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                 <div><Label>Visível na vitrine</Label><Switch checked={productDraft.isVisible} onCheckedChange={(checked) => setProductDraft({ ...productDraft, isVisible: checked })} /></div>
                 <div><Label>Produto em destaque</Label><Switch checked={productDraft.featured} onCheckedChange={(checked) => setProductDraft({ ...productDraft, featured: checked })} /></div>
               </div>
+              <div className="product-badge-editor">
+                <div><strong>Selos do produto</strong><p>Ative somente os que devem aparecer no cartão público.</p></div>
+                <div className="product-switches">
+                  <div><Label htmlFor="seller-badge">Produto Seller</Label><Switch id="seller-badge" checked={productDraft.sellerBadge} onCheckedChange={(checked) => setProductDraft({ ...productDraft, sellerBadge: checked })} /></div>
+                  <div><Label htmlFor="best-seller-badge">Mais vendido</Label><Switch id="best-seller-badge" checked={productDraft.bestSellerBadge} onCheckedChange={(checked) => setProductDraft({ ...productDraft, bestSellerBadge: checked })} /></div>
+                  <div><Label htmlFor="promotion-badge">Promoção com %</Label><Switch id="promotion-badge" checked={productDraft.promotionBadge} onCheckedChange={(checked) => setProductDraft({ ...productDraft, promotionBadge: checked })} /></div>
+                </div>
+                {productDraft.promotionBadge && <Field label="Percentual da promoção" hint="Selo informativo; não altera preços automaticamente."><Input type="number" min={1} max={99} value={productDraft.promotionPercent} onChange={(event) => setProductDraft({ ...productDraft, promotionPercent: Math.min(99, Math.max(1, Number(event.target.value) || 1)) })} /></Field>}
+              </div>
             </div>
           )}
           <SheetFooter className="product-sheet-footer"><Button variant="outline" onClick={() => setProductDraft(null)}>Cancelar</Button><Button onClick={() => { if (!productDraft?.name.trim() || !productDraft.slug.trim()) { toast.error("Informe o nome e o endereço do produto."); return; } upsertProduct(productDraft); }}><Check /> Aplicar ao rascunho</Button></SheetFooter>
@@ -1095,6 +1142,7 @@ function newProduct(order: number): Product {
     eyebrow: "NOVA EXPERIÊNCIA", subtitle: "", description: "", imageUrl: "",
     videoUrl: "", productUrl: "", ctaLabel: "Conhecer produto", status: "coming_soon",
     accentColor: DEFAULT_CONTENT.settings.accentColor, featured: false, isVisible: true,
+    sellerBadge: false, bestSellerBadge: false, promotionBadge: false, promotionPercent: 10,
     sortOrder: order,
   };
 }

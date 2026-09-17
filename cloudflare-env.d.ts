@@ -4,5 +4,6 @@ declare namespace Cloudflare {
     BUCKET?: R2Bucket;
     TEAM_DOMAIN?: string;
     POLICY_AUD?: string;
+    SITES_VALIDATION_AUTH?: string;
   }
 }

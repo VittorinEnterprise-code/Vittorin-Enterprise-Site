@@ -16,9 +16,17 @@ export type CloudflareAccessResult =
 export const CLOUDFLARE_ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
 
 const ACCESS_ASSERTION_HEADER = "cf-access-jwt-assertion";
+const SITE_USER_ID_HEADER = "oai-authenticated-user-id";
+const SITE_USER_EMAIL_HEADER = "oai-authenticated-user-email";
 const keySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 export async function getCloudflareAccessUser(): Promise<CloudflareAccessResult> {
+  const requestHeaders = await headers();
+  const siteUser = isSitesValidationEnvironment()
+    ? getSiteAuthenticatedUser(requestHeaders)
+    : null;
+  if (siteUser) return { user: siteUser, reason: null };
+
   const teamDomain = normalizeTeamDomain(env.TEAM_DOMAIN);
   const policyAudience = env.POLICY_AUD?.trim();
 
@@ -27,7 +35,6 @@ export async function getCloudflareAccessUser(): Promise<CloudflareAccessResult>
     return { user: null, reason: "misconfigured" };
   }
 
-  const requestHeaders = await headers();
   const token = requestHeaders.get(ACCESS_ASSERTION_HEADER);
   if (!token) return { user: null, reason: "unauthenticated" };
 
@@ -65,6 +72,31 @@ export async function getCloudflareAccessUser(): Promise<CloudflareAccessResult>
     );
     return { user: null, reason: "unauthenticated" };
   }
+}
+
+export async function isSitesAuthenticatedRequest() {
+  return isSitesValidationEnvironment() && Boolean(
+    getSiteAuthenticatedUser(await headers()),
+  );
+}
+
+function isSitesValidationEnvironment() {
+  return env.SITES_VALIDATION_AUTH === "1";
+}
+
+function getSiteAuthenticatedUser(
+  requestHeaders: Headers,
+): CloudflareAccessUser | null {
+  const userId = requestHeaders.get(SITE_USER_ID_HEADER)?.trim();
+  const email = requestHeaders.get(SITE_USER_EMAIL_HEADER)?.trim();
+  if (!userId || !email) return null;
+
+  return {
+    userId,
+    email,
+    fullName: null,
+    displayName: email,
+  };
 }
 
 function normalizeTeamDomain(value: string | undefined): string | null {

@@ -23,6 +23,12 @@ export const siteSettings = sqliteTable("site_settings", {
 
 export const appearanceSettings = sqliteTable("appearance_settings", {
   id: integer("id").primaryKey(),
+  themeEnabled: integer("theme_enabled", { mode: "boolean" }).notNull().default(false),
+  themePreset: text("theme_preset", { enum: ["juris", "graphite", "custom"] }).notNull().default("juris"),
+  themeCustomBackground: text("theme_custom_background").notNull().default("#101820"),
+  themeCustomSurface: text("theme_custom_surface").notNull().default("#1A2A36"),
+  themeCustomText: text("theme_custom_text").notNull().default("#F2F7FA"),
+  themeCustomAccent: text("theme_custom_accent").notNull().default("#63B6D9"),
   interfaceScale: integer("interface_scale").notNull(),
   fontScale: integer("font_scale").notNull(),
   boldText: integer("bold_text", { mode: "boolean" }).notNull(),
@@ -131,6 +137,10 @@ export const products = sqliteTable(
     }).notNull(),
     accentColor: text("accent_color").notNull(),
     featured: integer("featured", { mode: "boolean" }).notNull(),
+    sellerBadge: integer("seller_badge", { mode: "boolean" }).notNull().default(false),
+    bestSellerBadge: integer("best_seller_badge", { mode: "boolean" }).notNull().default(false),
+    promotionBadge: integer("promotion_badge", { mode: "boolean" }).notNull().default(false),
+    promotionPercent: integer("promotion_percent").notNull().default(10),
     isVisible: integer("is_visible", { mode: "boolean" }).notNull(),
     sortOrder: integer("sort_order").notNull(),
   },

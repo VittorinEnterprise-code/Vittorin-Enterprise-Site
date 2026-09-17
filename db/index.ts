@@ -17,6 +17,10 @@ export function getDb() {
 }
 
 export async function ensureDatabaseSchema() {
+  // Sites applies the tracked Drizzle migrations before the Worker starts.
+  // The production Cloudflare Worker keeps its legacy idempotent bootstrap.
+  if (env.SITES_VALIDATION_AUTH === "1") return;
+
   if (!schemaInitialization) {
     const database = getD1Binding();
     schemaInitialization = database
@@ -47,6 +51,10 @@ export async function ensureDatabaseSchema() {
           status text NOT NULL,
           accent_color text NOT NULL,
           featured integer NOT NULL,
+          seller_badge integer NOT NULL DEFAULT 0,
+          best_seller_badge integer NOT NULL DEFAULT 0,
+          promotion_badge integer NOT NULL DEFAULT 0,
+          promotion_percent integer NOT NULL DEFAULT 10,
           is_visible integer NOT NULL,
           sort_order integer NOT NULL,
           FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
@@ -86,6 +94,12 @@ export async function ensureDatabaseSchema() {
           font_scale integer NOT NULL,
           bold_text integer NOT NULL,
           contrast integer NOT NULL,
+          theme_enabled integer NOT NULL DEFAULT 0,
+          theme_preset text NOT NULL DEFAULT 'juris',
+          theme_custom_background text NOT NULL DEFAULT '#101820',
+          theme_custom_surface text NOT NULL DEFAULT '#1A2A36',
+          theme_custom_text text NOT NULL DEFAULT '#F2F7FA',
+          theme_custom_accent text NOT NULL DEFAULT '#63B6D9',
           custom_font_url text NOT NULL,
           background_audio_url text NOT NULL,
           background_audio_enabled integer NOT NULL,
@@ -133,7 +147,31 @@ export async function ensureDatabaseSchema() {
           "CREATE INDEX IF NOT EXISTS idx_welcome_visible_order ON welcome_elements (is_visible, sort_order)",
         ),
       ])
-      .then(() => undefined)
+      .then(async () => {
+        const updates = [
+          ["products", "seller_badge", "integer NOT NULL DEFAULT 0"],
+          ["products", "best_seller_badge", "integer NOT NULL DEFAULT 0"],
+          ["products", "promotion_badge", "integer NOT NULL DEFAULT 0"],
+          ["products", "promotion_percent", "integer NOT NULL DEFAULT 10"],
+          ["appearance_settings", "theme_enabled", "integer NOT NULL DEFAULT 0"],
+          ["appearance_settings", "theme_preset", "text NOT NULL DEFAULT 'juris'"],
+          ["appearance_settings", "theme_custom_background", "text NOT NULL DEFAULT '#101820'"],
+          ["appearance_settings", "theme_custom_surface", "text NOT NULL DEFAULT '#1A2A36'"],
+          ["appearance_settings", "theme_custom_text", "text NOT NULL DEFAULT '#F2F7FA'"],
+          ["appearance_settings", "theme_custom_accent", "text NOT NULL DEFAULT '#63B6D9'"],
+        ] as const;
+
+        for (const [table, column, definition] of updates) {
+          const existing = await database.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+          if (existing.results.some((field) => field.name === column)) continue;
+          try {
+            await database.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+          } catch (error) {
+            const refreshed = await database.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+            if (!refreshed.results.some((field) => field.name === column)) throw error;
+          }
+        }
+      })
       .catch((error) => {
         schemaInitialization = null;
         throw error;

@@ -62,6 +62,12 @@ export async function loadSiteContent(): Promise<SiteContent> {
     },
     appearance: appearance
       ? {
+          themeEnabled: appearance.themeEnabled,
+          themePreset: appearance.themePreset,
+          themeCustomBackground: appearance.themeCustomBackground,
+          themeCustomSurface: appearance.themeCustomSurface,
+          themeCustomText: appearance.themeCustomText,
+          themeCustomAccent: appearance.themeCustomAccent,
           interfaceScale: appearance.interfaceScale,
           fontScale: appearance.fontScale,
           boldText: appearance.boldText,
@@ -148,8 +154,10 @@ export async function saveSiteContent(content: SiteContent) {
       .prepare(
         `INSERT INTO appearance_settings (
           id, interface_scale, font_scale, bold_text, contrast, custom_font_url,
-          background_audio_url, background_audio_enabled, background_audio_volume, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          background_audio_url, background_audio_enabled, background_audio_volume,
+          theme_enabled, theme_preset, theme_custom_background, theme_custom_surface,
+          theme_custom_text, theme_custom_accent, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           interface_scale = excluded.interface_scale,
           font_scale = excluded.font_scale,
@@ -159,6 +167,12 @@ export async function saveSiteContent(content: SiteContent) {
           background_audio_url = excluded.background_audio_url,
           background_audio_enabled = excluded.background_audio_enabled,
           background_audio_volume = excluded.background_audio_volume,
+          theme_enabled = excluded.theme_enabled,
+          theme_preset = excluded.theme_preset,
+          theme_custom_background = excluded.theme_custom_background,
+          theme_custom_surface = excluded.theme_custom_surface,
+          theme_custom_text = excluded.theme_custom_text,
+          theme_custom_accent = excluded.theme_custom_accent,
           updated_at = excluded.updated_at`,
       )
       .bind(
@@ -171,6 +185,12 @@ export async function saveSiteContent(content: SiteContent) {
         appearance.backgroundAudioUrl,
         appearance.backgroundAudioEnabled ? 1 : 0,
         appearance.backgroundAudioVolume,
+        appearance.themeEnabled ? 1 : 0,
+        appearance.themePreset,
+        appearance.themeCustomBackground,
+        appearance.themeCustomSurface,
+        appearance.themeCustomText,
+        appearance.themeCustomAccent,
         Date.now(),
       ),
     database
@@ -271,8 +291,9 @@ export async function saveSiteContent(content: SiteContent) {
           `INSERT INTO products (
             id, category_id, name, slug, eyebrow, subtitle, description,
             image_url, video_url, product_url, cta_label, status,
-            accent_color, featured, is_visible, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            accent_color, featured, seller_badge, best_seller_badge,
+            promotion_badge, promotion_percent, is_visible, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           product.id,
@@ -289,6 +310,10 @@ export async function saveSiteContent(content: SiteContent) {
           product.status,
           product.accentColor,
           product.featured ? 1 : 0,
+          product.sellerBadge ? 1 : 0,
+          product.bestSellerBadge ? 1 : 0,
+          product.promotionBadge ? 1 : 0,
+          product.promotionPercent,
           product.isVisible ? 1 : 0,
           product.sortOrder,
         ),

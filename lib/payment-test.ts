@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ensureDatabaseSchema, getDb } from "@/db";
 import { paymentTestOrders } from "@/db/schema";
 import { ADMIN_EMAIL, getAuthorizedAdmin } from "@/lib/admin";
+import { trustedMercadoPagoCheckoutUrl } from "@/lib/mercado-pago-url";
 
 // This item exists only in the private validation flow. It is not a storefront product.
 export const TEST_PRODUCT = {
@@ -34,6 +35,13 @@ class MercadoPagoHttpError extends Error {
   }
 }
 
+class MercadoPagoResponseError extends Error {
+  constructor(public readonly reason: string) {
+    super(reason);
+    this.name = "MercadoPagoResponseError";
+  }
+}
+
 const accountSchema = z.object({
   id: z.union([z.number().int(), z.string().min(1)]),
   email: z.string().email(),
@@ -46,7 +54,7 @@ const orderSchema = z.object({
   external_reference: z.string().min(1),
   total_amount: z.string().min(1),
   currency: z.string().min(1),
-  checkout_url: z.string().url().optional(),
+  checkout_url: z.string().url().nullish(),
 });
 
 const mercadoPagoErrorSchema = z.object({
@@ -139,13 +147,18 @@ export async function createPaymentTestOrder(buyerEmail: string) {
       }),
     });
     const order = orderSchema.parse(payload);
-    if (
-      order.external_reference !== id ||
-      !matchesProduct(order.total_amount, order.currency) ||
-      !order.checkout_url ||
-      !isMercadoPagoCheckoutUrl(order.checkout_url)
-    ) {
-      throw new Error("mercado_pago_test_order_mismatch");
+    if (order.external_reference !== id) {
+      throw new MercadoPagoResponseError("response_reference_mismatch");
+    }
+    if (!matchesProduct(order.total_amount, order.currency)) {
+      throw new MercadoPagoResponseError("response_amount_mismatch");
+    }
+    if (!order.checkout_url) {
+      throw new MercadoPagoResponseError("response_checkout_url_missing");
+    }
+    const checkoutUrl = trustedMercadoPagoCheckoutUrl(order.checkout_url);
+    if (!checkoutUrl) {
+      throw new MercadoPagoResponseError("response_checkout_url_untrusted");
     }
 
     const updatedAt = new Date();
@@ -153,7 +166,7 @@ export async function createPaymentTestOrder(buyerEmail: string) {
       mpOrderId: order.id,
       status: order.status,
       statusDetail: order.status_detail,
-      checkoutUrl: order.checkout_url,
+      checkoutUrl,
       updatedAt,
     }).where(eq(paymentTestOrders.id, id));
 
@@ -166,7 +179,7 @@ export async function createPaymentTestOrder(buyerEmail: string) {
       currency: TEST_PRODUCT.currency,
       status: order.status,
       statusDetail: order.status_detail,
-      checkoutUrl: order.checkout_url,
+      checkoutUrl,
       createdAt: now,
       updatedAt,
     });
@@ -187,14 +200,16 @@ export async function createPaymentTestOrder(buyerEmail: string) {
 
     // An HTTP timeout can leave the remote result uncertain; never retry with a new
     // idempotency key automatically or describe this as a confirmed failure.
+    const failureReason = uncertainCreateReason(error);
     await db.update(paymentTestOrders).set({
       status: "creation_uncertain",
-      statusDetail: "check_mercado_pago",
+      statusDetail: failureReason,
       updatedAt: new Date(),
     }).where(eq(paymentTestOrders.id, id));
     console.error(JSON.stringify({
       event: "mercado_pago_test_order_create_failed",
       errorType: error instanceof Error ? error.name : "unknown",
+      reason: failureReason,
     }));
     throw new PaymentTestError(
       502,
@@ -350,12 +365,14 @@ function decimalCents(amount: string) {
   return BigInt(match[1]) * BigInt(100) + BigInt((match[2] ?? "").padEnd(2, "0"));
 }
 
-function isMercadoPagoCheckoutUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" &&
-      (url.hostname === "mercadopago.com.br" || url.hostname.endsWith(".mercadopago.com.br"));
-  } catch {
-    return false;
+function uncertainCreateReason(error: unknown) {
+  if (error instanceof MercadoPagoResponseError) return error.reason;
+  if (error instanceof z.ZodError) return "mercado_pago_response_schema";
+  if (
+    error instanceof Error &&
+    (error.name === "TimeoutError" || error.name === "AbortError")
+  ) {
+    return "mercado_pago_timeout";
   }
+  return "check_mercado_pago";
 }

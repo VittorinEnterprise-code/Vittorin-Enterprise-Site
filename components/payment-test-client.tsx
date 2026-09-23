@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { trustedMercadoPagoCheckoutUrl } from "@/lib/mercado-pago-url";
 
 type TestOrder = {
   id: string;
@@ -36,26 +37,6 @@ type CheckoutTestState = {
 async function readError(response: Response) {
   const body = (await response.json().catch(() => null)) as { error?: string } | null;
   return body?.error ?? "Não foi possível concluir esta ação. Tente novamente.";
-}
-
-function trustedCheckoutUrl(value: string | null) {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    if (
-      url.protocol === "https:" &&
-      (host === "mercadopago.com.br" ||
-        host.endsWith(".mercadopago.com.br") ||
-        host === "mercadopago.com" ||
-        host.endsWith(".mercadopago.com"))
-    ) {
-      return url.href;
-    }
-  } catch {
-    // A malformed or unexpected address must never become a clickable link.
-  }
-  return null;
 }
 
 function displayDate(timestamp: number) {
@@ -101,6 +82,19 @@ function statusLabel(status: string, statusDetail: string) {
     refunded: "Estornado no teste",
   };
   return labels[status.toLowerCase()] ?? status;
+}
+
+function statusDetailLabel(statusDetail: string) {
+  const labels: Record<string, string> = {
+    check_mercado_pago: "Verificação manual necessária",
+    mercado_pago_response_schema: "Resposta inesperada do Mercado Pago",
+    mercado_pago_timeout: "O Mercado Pago demorou para responder",
+    response_amount_mismatch: "O valor retornado não corresponde ao teste",
+    response_checkout_url_missing: "O Mercado Pago não retornou o link de pagamento",
+    response_checkout_url_untrusted: "O endereço de pagamento retornado não foi reconhecido",
+    response_reference_mismatch: "A referência retornada não corresponde ao pedido",
+  };
+  return labels[statusDetail.toLowerCase()] ?? statusDetail;
 }
 
 export function PaymentTestClient() {
@@ -303,14 +297,14 @@ export function PaymentTestClient() {
               ) : (
                 <div className="mt-5 space-y-4">
                   {state.orders.map((order) => {
-                    const checkoutUrl = trustedCheckoutUrl(order.checkoutUrl);
+                    const checkoutUrl = trustedMercadoPagoCheckoutUrl(order.checkoutUrl);
                     return (
                       <article key={order.id} className="rounded-xl border border-border bg-background/70 p-4 sm:p-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <p className="text-xs text-muted-foreground">Pedido {order.id.slice(0, 12)} · {displayDate(order.createdAt)}</p>
                             <h3 className="mt-1 font-semibold">{statusLabel(order.status, order.statusDetail)}</h3>
-                            {order.statusDetail && <p className="mt-1 text-sm text-muted-foreground">{order.statusDetail}</p>}
+                            {order.statusDetail && <p className="mt-1 text-sm text-muted-foreground">{statusDetailLabel(order.statusDetail)}</p>}
                             {order.mpOrderId && <p className="mt-1 text-xs text-muted-foreground">Referência Mercado Pago: {order.mpOrderId}</p>}
                           </div>
                           <Button variant="outline" size="sm" disabled={refreshingId === order.id || !state.configured || !order.mpOrderId} onClick={() => void refreshOrder(order.id)}>

@@ -92,8 +92,18 @@ function statusDetailLabel(statusDetail: string) {
     response_amount_mismatch: "O valor retornado não corresponde ao teste",
     response_checkout_url_missing: "O Mercado Pago não retornou o link de pagamento",
     response_checkout_url_untrusted: "O endereço de pagamento retornado não foi reconhecido",
+    response_currency_mismatch: "A moeda retornada não corresponde ao teste",
+    response_order_id_missing: "O Mercado Pago não retornou o identificador do pedido",
+    response_order_id_mismatch: "O identificador retornado não corresponde ao pedido",
     response_reference_mismatch: "A referência retornada não corresponde ao pedido",
+    response_status_missing: "O Mercado Pago não retornou a situação do pedido",
+    idempotency_key_already_used: "A identificação segura deste pedido já foi utilizada",
+    internal_error: "O Mercado Pago apresentou uma falha interna temporária",
+    resource_locked: "O Mercado Pago bloqueou temporariamente este pedido",
   };
+  if (statusDetail.toLowerCase().startsWith("mercado_pago_http_")) {
+    return "O Mercado Pago apresentou uma falha temporária";
+  }
   return labels[statusDetail.toLowerCase()] ?? statusDetail;
 }
 
@@ -102,7 +112,7 @@ export function PaymentTestClient() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
-  const [buyerEmail, setBuyerEmail] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState("test@testuser.com");
   const [creating, setCreating] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
 
@@ -250,7 +260,7 @@ export function PaymentTestClient() {
                 ) : (
                   <form onSubmit={(event) => void createOrder(event)} className="mt-6 space-y-4 border-t border-border pt-6">
                     <div className="space-y-2">
-                      <Label htmlFor="test-buyer-email">E-mail da conta compradora de teste</Label>
+                      <Label htmlFor="test-buyer-email">E-mail de teste do pagador</Label>
                       <Input
                         id="test-buyer-email"
                         type="email"
@@ -262,7 +272,7 @@ export function PaymentTestClient() {
                         onChange={(event) => setBuyerEmail(event.target.value)}
                       />
                       <p className="text-xs leading-5 text-muted-foreground">
-                        Use o e-mail exibido na conta de teste do tipo <strong>Comprador</strong>. O campo <strong>Usuário</strong> que começa com USER é apenas o login. Nunca digite a senha ou o código de verificação aqui.
+                        Para esta ordem de sandbox, <strong>test@testuser.com</strong> é aceito pelo Mercado Pago. O campo <strong>Usuário</strong> que começa com USER é apenas o login usado depois no checkout. Nunca digite a senha ou o código de verificação aqui.
                       </p>
                     </div>
                     <Button type="submit" disabled={creating} className="w-full sm:w-auto">

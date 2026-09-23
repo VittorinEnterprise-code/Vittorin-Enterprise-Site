@@ -47,15 +47,17 @@ const accountSchema = z.object({
   email: z.string().email(),
 });
 
+const nonEmptyString = z.string().trim().min(1);
+
 const orderSchema = z.object({
-  id: z.string().min(1),
-  status: z.string().min(1),
-  status_detail: z.string().min(1),
-  external_reference: z.string().min(1),
-  total_amount: z.string().min(1),
-  currency: z.string().min(1),
-  checkout_url: z.string().url().nullish(),
-});
+  id: nonEmptyString.nullish(),
+  status: nonEmptyString.nullish(),
+  status_detail: nonEmptyString.nullish(),
+  external_reference: nonEmptyString.nullish(),
+  total_amount: nonEmptyString.nullish(),
+  currency: nonEmptyString.nullish(),
+  checkout_url: nonEmptyString.nullish(),
+}).passthrough();
 
 const mercadoPagoErrorSchema = z.object({
   errors: z.array(z.object({
@@ -147,12 +149,31 @@ export async function createPaymentTestOrder(buyerEmail: string) {
       }),
     });
     const order = orderSchema.parse(payload);
-    if (order.external_reference !== id) {
+    if (!order.id) {
+      throw new MercadoPagoResponseError("response_order_id_missing");
+    }
+    if (order.external_reference && order.external_reference !== id) {
       throw new MercadoPagoResponseError("response_reference_mismatch");
     }
-    if (!matchesProduct(order.total_amount, order.currency)) {
+    if (
+      order.total_amount &&
+      decimalCents(order.total_amount) !== BigInt(1000)
+    ) {
       throw new MercadoPagoResponseError("response_amount_mismatch");
     }
+    if (order.currency && order.currency !== TEST_PRODUCT.currency) {
+      throw new MercadoPagoResponseError("response_currency_mismatch");
+    }
+    const status = order.status ?? "created";
+    const statusDetail = order.status_detail ?? status;
+
+    // Preserve the remote ID as soon as the 201 response is tied safely to this
+    // request. If the checkout link is absent, the order can still be queried.
+    await db.update(paymentTestOrders).set({
+      mpOrderId: order.id,
+      updatedAt: new Date(),
+    }).where(eq(paymentTestOrders.id, id));
+
     if (!order.checkout_url) {
       throw new MercadoPagoResponseError("response_checkout_url_missing");
     }
@@ -164,8 +185,8 @@ export async function createPaymentTestOrder(buyerEmail: string) {
     const updatedAt = new Date();
     await db.update(paymentTestOrders).set({
       mpOrderId: order.id,
-      status: order.status,
-      statusDetail: order.status_detail,
+      status,
+      statusDetail,
       checkoutUrl,
       updatedAt,
     }).where(eq(paymentTestOrders.id, id));
@@ -177,8 +198,8 @@ export async function createPaymentTestOrder(buyerEmail: string) {
       productName: TEST_PRODUCT.name,
       amount: TEST_PRODUCT.amount,
       currency: TEST_PRODUCT.currency,
-      status: order.status,
-      statusDetail: order.status_detail,
+      status,
+      statusDetail,
       checkoutUrl,
       createdAt: now,
       updatedAt,
@@ -210,6 +231,7 @@ export async function createPaymentTestOrder(buyerEmail: string) {
       event: "mercado_pago_test_order_create_failed",
       errorType: error instanceof Error ? error.name : "unknown",
       reason: failureReason,
+      ...safeFailureDiagnostics(error),
     }));
     throw new PaymentTestError(
       502,
@@ -235,20 +257,32 @@ export async function refreshPaymentTestOrder(id: string) {
       token,
     );
     const order = orderSchema.parse(payload);
-    if (
-      order.id !== row.mpOrderId ||
-      order.external_reference !== row.id ||
-      !matchesProduct(order.total_amount, order.currency)
-    ) {
-      throw new Error("mercado_pago_test_status_mismatch");
+    if (order.id && order.id !== row.mpOrderId) {
+      throw new MercadoPagoResponseError("response_order_id_mismatch");
     }
+    if (order.external_reference && order.external_reference !== row.id) {
+      throw new MercadoPagoResponseError("response_reference_mismatch");
+    }
+    if (
+      order.total_amount &&
+      decimalCents(order.total_amount) !== BigInt(1000)
+    ) {
+      throw new MercadoPagoResponseError("response_amount_mismatch");
+    }
+    if (order.currency && order.currency !== TEST_PRODUCT.currency) {
+      throw new MercadoPagoResponseError("response_currency_mismatch");
+    }
+    if (!order.status) {
+      throw new MercadoPagoResponseError("response_status_missing");
+    }
+    const statusDetail = order.status_detail ?? order.status;
     const updatedAt = new Date();
     await db.update(paymentTestOrders).set({
       status: order.status,
-      statusDetail: order.status_detail,
+      statusDetail,
       updatedAt,
     }).where(eq(paymentTestOrders.id, id));
-    return toPublicTestOrder({ ...row, status: order.status, statusDetail: order.status_detail, updatedAt });
+    return toPublicTestOrder({ ...row, status: order.status, statusDetail, updatedAt });
   } catch (error) {
     console.error("mercado_pago_test_status_failed", error instanceof Error ? error.name : "unknown");
     throw new PaymentTestError(502, "Não foi possível confirmar o estado da ordem no Mercado Pago.");
@@ -316,7 +350,7 @@ function createRejectionError(error: MercadoPagoHttpError) {
   if (error.upstreamCode === "invalid_email_for_sandbox") {
     return new PaymentTestError(
       400,
-      "Use o e-mail exato da conta compradora de teste vinculada à aplicação.",
+      "Use um e-mail de sandbox terminado em @testuser.com, como test@testuser.com.",
     );
   }
   if (error.status === 401 || error.status === 403) {
@@ -355,10 +389,6 @@ export async function readBoundedJson(response: Request | Response, maxBytes: nu
   return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
 }
 
-function matchesProduct(amount: string, currency: string) {
-  return currency === TEST_PRODUCT.currency && decimalCents(amount) === BigInt(1000);
-}
-
 function decimalCents(amount: string) {
   const match = /^(0|[1-9]\d*)(?:\.(\d{1,2}))?$/.exec(amount);
   if (!match) return null;
@@ -367,6 +397,9 @@ function decimalCents(amount: string) {
 
 function uncertainCreateReason(error: unknown) {
   if (error instanceof MercadoPagoResponseError) return error.reason;
+  if (error instanceof MercadoPagoHttpError) {
+    return error.upstreamCode ?? "mercado_pago_http_" + error.status;
+  }
   if (error instanceof z.ZodError) return "mercado_pago_response_schema";
   if (
     error instanceof Error &&
@@ -375,4 +408,26 @@ function uncertainCreateReason(error: unknown) {
     return "mercado_pago_timeout";
   }
   return "check_mercado_pago";
+}
+
+function safeFailureDiagnostics(error: unknown) {
+  if (error instanceof MercadoPagoHttpError) {
+    return {
+      upstreamStatus: error.status,
+      upstreamCode: error.upstreamCode,
+    };
+  }
+  if (error instanceof z.ZodError) {
+    return {
+      schemaIssues: error.issues.slice(0, 10).map((issue) => ({
+        path: issue.path.slice(0, 8).map((part) =>
+          typeof part === "number" ? part : part.slice(0, 64)
+        ),
+        code: issue.code,
+        expected: issue.code === z.ZodIssueCode.invalid_type ? issue.expected : null,
+        received: issue.code === z.ZodIssueCode.invalid_type ? issue.received : null,
+      })),
+    };
+  }
+  return {};
 }

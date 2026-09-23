@@ -22,6 +22,13 @@
       "when": 1789675528968,
       "tag": "0002_breezy_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789680000000,
+      "tag": "0003_checkout_test_orders",
+      "breakpoints": true
     }
   ]
 }

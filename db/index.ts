@@ -146,6 +146,29 @@ export async function ensureDatabaseSchema() {
         database.prepare(
           "CREATE INDEX IF NOT EXISTS idx_welcome_visible_order ON welcome_elements (is_visible, sort_order)",
         ),
+        ...(env.DEPLOYMENT_ENV === "staging"
+          ? [
+              database.prepare(`CREATE TABLE IF NOT EXISTS payment_test_orders (
+                id text PRIMARY KEY NOT NULL,
+                mp_order_id text,
+                buyer_email text,
+                product_name text NOT NULL,
+                amount text NOT NULL,
+                currency text NOT NULL,
+                status text NOT NULL,
+                status_detail text NOT NULL,
+                checkout_url text,
+                created_at integer NOT NULL,
+                updated_at integer NOT NULL
+              )`),
+              database.prepare(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_test_orders_mp_order_id ON payment_test_orders (mp_order_id)",
+              ),
+              database.prepare(
+                "CREATE INDEX IF NOT EXISTS idx_payment_test_orders_created_at ON payment_test_orders (created_at)",
+              ),
+            ]
+          : []),
       ])
       .then(async () => {
         const updates = [

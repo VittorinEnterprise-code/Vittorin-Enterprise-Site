@@ -150,3 +150,26 @@ export const products = sqliteTable(
     index("idx_products_visible_order").on(table.isVisible, table.sortOrder),
   ],
 );
+
+// Checkout Pro sandbox orders are deliberately separate from the editable storefront.
+// The immutable item/amount snapshot remains available even when Studio content changes.
+export const paymentTestOrders = sqliteTable(
+  "payment_test_orders",
+  {
+    id: text("id").primaryKey(),
+    mpOrderId: text("mp_order_id"),
+    buyerEmail: text("buyer_email"),
+    productName: text("product_name").notNull(),
+    amount: text("amount").notNull(),
+    currency: text("currency").notNull(),
+    status: text("status").notNull(),
+    statusDetail: text("status_detail").notNull(),
+    checkoutUrl: text("checkout_url"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_payment_test_orders_mp_order_id").on(table.mpOrderId),
+    index("idx_payment_test_orders_created_at").on(table.createdAt),
+  ],
+);

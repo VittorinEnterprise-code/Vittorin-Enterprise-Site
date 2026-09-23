@@ -86,6 +86,7 @@ function statusLabel(status: string, statusDetail: string) {
   }
   const labels: Record<string, string> = {
     creating: "Criando pedido de teste",
+    creation_failed: "Criação recusada",
     creation_uncertain: "Criação não confirmada",
     created: "Pedido criado",
     open: "Aguardando pagamento",
@@ -145,7 +146,7 @@ export function PaymentTestClient() {
       const response = await fetch("/studio/api/checkout-test", {
         method: "POST",
         headers: { "content-type": "application/json", "X-Checkout-Test": "1" },
-        body: JSON.stringify(buyerEmail.trim() ? { buyerEmail: buyerEmail.trim().toLowerCase() } : {}),
+        body: JSON.stringify({ buyerEmail: buyerEmail.trim().toLowerCase() }),
       });
       if (!response.ok) throw new Error(await readError(response));
       if (await load()) {
@@ -255,18 +256,19 @@ export function PaymentTestClient() {
                 ) : (
                   <form onSubmit={(event) => void createOrder(event)} className="mt-6 space-y-4 border-t border-border pt-6">
                     <div className="space-y-2">
-                      <Label htmlFor="test-buyer-email">E-mail do comprador de teste (opcional)</Label>
+                      <Label htmlFor="test-buyer-email">E-mail da conta compradora de teste</Label>
                       <Input
                         id="test-buyer-email"
                         type="email"
                         autoComplete="off"
                         maxLength={254}
-                        placeholder="Pode deixar em branco"
+                        placeholder="comprador@testuser.com"
+                        required
                         value={buyerEmail}
                         onChange={(event) => setBuyerEmail(event.target.value)}
                       />
                       <p className="text-xs leading-5 text-muted-foreground">
-                        O campo <strong>Usuário</strong> que começa com USER é o login, não o e-mail. Se não souber o e-mail de teste, deixe este campo vazio. Nunca digite a senha ou o código de verificação aqui.
+                        Use o e-mail exibido na conta de teste do tipo <strong>Comprador</strong>. O campo <strong>Usuário</strong> que começa com USER é apenas o login. Nunca digite a senha ou o código de verificação aqui.
                       </p>
                     </div>
                     <Button type="submit" disabled={creating} className="w-full sm:w-auto">
@@ -311,7 +313,7 @@ export function PaymentTestClient() {
                             {order.statusDetail && <p className="mt-1 text-sm text-muted-foreground">{order.statusDetail}</p>}
                             {order.mpOrderId && <p className="mt-1 text-xs text-muted-foreground">Referência Mercado Pago: {order.mpOrderId}</p>}
                           </div>
-                          <Button variant="outline" size="sm" disabled={refreshingId === order.id || !state.configured} onClick={() => void refreshOrder(order.id)}>
+                          <Button variant="outline" size="sm" disabled={refreshingId === order.id || !state.configured || !order.mpOrderId} onClick={() => void refreshOrder(order.id)}>
                             {refreshingId === order.id ? <Loader2 className="animate-spin" aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
                             Atualizar situação
                           </Button>

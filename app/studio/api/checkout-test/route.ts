@@ -11,8 +11,7 @@ import {
 
 const createSchema = z.object({
   buyerEmail: z.string().trim().email().max(254)
-    .refine((email) => email.toLowerCase().endsWith("@testuser.com"))
-    .optional(),
+    .refine((email) => email.toLowerCase().endsWith("@testuser.com")),
 });
 
 function json(body: object, status = 200) {
@@ -51,9 +50,9 @@ export async function POST(request: Request) {
   try {
     const input = createSchema.safeParse(await readBoundedJson(request, 1024));
     if (!input.success) {
-      return json({ error: "Informe um e-mail válido de teste ou deixe o campo vazio." }, 400);
+      return json({ error: "Informe o e-mail da conta compradora de teste, terminado em @testuser.com." }, 400);
     }
-    const order = await createPaymentTestOrder(input.data.buyerEmail ?? null);
+    const order = await createPaymentTestOrder(input.data.buyerEmail);
     return json({ order }, 201);
   } catch (error) {
     if (error instanceof PaymentTestError) return json({ error: error.message }, error.status);

@@ -20,6 +20,17 @@ export class PaymentTestError extends Error {
     message: string,
   ) {
     super(message);
+    this.name = "PaymentTestError";
+  }
+}
+
+class MercadoPagoHttpError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly upstreamCode: string | null,
+  ) {
+    super("mercado_pago_http_" + status);
+    this.name = "MercadoPagoHttpError";
   }
 }
 
@@ -36,6 +47,12 @@ const orderSchema = z.object({
   total_amount: z.string().min(1),
   currency: z.string().min(1),
   checkout_url: z.string().url().optional(),
+});
+
+const mercadoPagoErrorSchema = z.object({
+  errors: z.array(z.object({
+    code: z.string().regex(/^[a-z0-9_]{1,100}$/),
+  })).min(1),
 });
 
 export function isPaymentTestConfigured() {
@@ -79,7 +96,7 @@ export async function listPaymentTestOrders() {
   return rows.map(toPublicTestOrder);
 }
 
-export async function createPaymentTestOrder(buyerEmail: string | null) {
+export async function createPaymentTestOrder(buyerEmail: string) {
   const token = getTestToken();
   await verifyTestSeller(token);
   await ensureDatabaseSchema();
@@ -113,13 +130,11 @@ export async function createPaymentTestOrder(buyerEmail: string | null) {
         processing_mode: "manual",
         total_amount: TEST_PRODUCT.amount,
         external_reference: id,
-        ...(buyerEmail ? { payer: { email: buyerEmail } } : {}),
+        payer: { email: buyerEmail },
         items: [{
           title: TEST_PRODUCT.name,
           unit_price: TEST_PRODUCT.amount,
           quantity: 1,
-          unit_measure: "unit",
-          total_amount: TEST_PRODUCT.amount,
         }],
       }),
     });
@@ -156,6 +171,20 @@ export async function createPaymentTestOrder(buyerEmail: string | null) {
       updatedAt,
     });
   } catch (error) {
+    if (isDefinitiveCreateRejection(error)) {
+      await db.update(paymentTestOrders).set({
+        status: "creation_failed",
+        statusDetail: error.upstreamCode ?? "mercado_pago_http_" + error.status,
+        updatedAt: new Date(),
+      }).where(eq(paymentTestOrders.id, id));
+      console.error(JSON.stringify({
+        event: "mercado_pago_test_order_rejected",
+        upstreamStatus: error.status,
+        upstreamCode: error.upstreamCode,
+      }));
+      throw createRejectionError(error);
+    }
+
     // An HTTP timeout can leave the remote result uncertain; never retry with a new
     // idempotency key automatically or describe this as a confirmed failure.
     await db.update(paymentTestOrders).set({
@@ -163,7 +192,10 @@ export async function createPaymentTestOrder(buyerEmail: string | null) {
       statusDetail: "check_mercado_pago",
       updatedAt: new Date(),
     }).where(eq(paymentTestOrders.id, id));
-    console.error("mercado_pago_test_order_create_failed", error instanceof Error ? error.name : "unknown");
+    console.error(JSON.stringify({
+      event: "mercado_pago_test_order_create_failed",
+      errorType: error instanceof Error ? error.name : "unknown",
+    }));
     throw new PaymentTestError(
       502,
       "Não foi possível confirmar a criação da ordem de teste. Confira sua conta Mercado Pago antes de tentar novamente.",
@@ -247,8 +279,41 @@ async function mercadoPagoJson(url: string, token: string, init: RequestInit = {
     signal: AbortSignal.timeout(15_000),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("mercado_pago_http_" + response.status);
+  if (!response.ok) {
+    let upstreamCode: string | null = null;
+    try {
+      const parsed = mercadoPagoErrorSchema.safeParse(await readBoundedJson(response, 64 * 1024));
+      if (parsed.success) upstreamCode = parsed.data.errors[0].code;
+    } catch {
+      // The HTTP status still identifies the upstream failure when its body is absent or malformed.
+    }
+    throw new MercadoPagoHttpError(response.status, upstreamCode);
+  }
   return readBoundedJson(response, 64 * 1024);
+}
+
+function isDefinitiveCreateRejection(error: unknown): error is MercadoPagoHttpError {
+  return error instanceof MercadoPagoHttpError &&
+    (error.status === 400 || error.status === 401 || error.status === 403 || error.status === 422);
+}
+
+function createRejectionError(error: MercadoPagoHttpError) {
+  if (error.upstreamCode === "invalid_email_for_sandbox") {
+    return new PaymentTestError(
+      400,
+      "Use o e-mail exato da conta compradora de teste vinculada à aplicação.",
+    );
+  }
+  if (error.status === 401 || error.status === 403) {
+    return new PaymentTestError(
+      503,
+      "O Mercado Pago recusou a credencial de teste. Nenhuma cobrança foi iniciada.",
+    );
+  }
+  return new PaymentTestError(
+    502,
+    "O Mercado Pago recusou os dados da ordem de teste. Nenhuma cobrança foi iniciada.",
+  );
 }
 
 export async function readBoundedJson(response: Request | Response, maxBytes: number): Promise<unknown> {

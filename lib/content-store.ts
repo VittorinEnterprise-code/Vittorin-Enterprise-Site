@@ -1,4 +1,4 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { ensureDatabaseSchema, getD1Binding, getDb } from "@/db";
 import {
   appearanceSettings,
@@ -11,6 +11,13 @@ import {
   welcomeElements,
 } from "@/db/schema";
 import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
+
+export class ContentSaveConflictError extends Error {
+  constructor() {
+    super("O estoque mudou enquanto o Estúdio estava aberto. Recarregue a página antes de salvar novamente.");
+    this.name = "ContentSaveConflictError";
+  }
+}
 
 export async function loadSiteContent(): Promise<SiteContent> {
   await ensureDatabaseSchema();
@@ -32,7 +39,9 @@ export async function loadSiteContent(): Promise<SiteContent> {
     db.select().from(socialLinks).orderBy(asc(socialLinks.sortOrder), asc(socialLinks.label)),
     db.select().from(welcomeElements).orderBy(asc(welcomeElements.sortOrder)),
     db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
-    db.select().from(products).orderBy(asc(products.sortOrder), asc(products.name)),
+    db.select().from(products)
+      .where(eq(products.archived, false))
+      .orderBy(asc(products.sortOrder), asc(products.name)),
   ]);
 
   const settings = settingsRows[0];
@@ -102,7 +111,36 @@ export async function saveSiteContent(content: SiteContent) {
   const settings = content.settings;
   const appearance = content.appearance;
   const social = content.socialSettings;
+  const inventoryGuardId = crypto.randomUUID();
+  const inventoryGuard = content.products.length
+    ? database.prepare(`WITH expected(id, revision) AS (
+        SELECT
+          json_extract(value, '$.id'),
+          CAST(json_extract(value, '$.revision') AS INTEGER)
+        FROM json_each(?)
+      )
+      INSERT INTO content_save_guards (id, ok)
+      SELECT ?, CASE WHEN NOT EXISTS (
+        SELECT 1
+        FROM expected
+        LEFT JOIN products ON products.id = expected.id
+        WHERE
+          (products.id IS NULL AND expected.revision <> 0)
+          OR (
+            products.id IS NOT NULL
+            AND products.inventory_revision <> expected.revision
+          )
+      ) THEN 1 ELSE NULL END`)
+      .bind(
+        JSON.stringify(content.products.map((product) => ({
+          id: product.id,
+          revision: product.inventoryRevision,
+        }))),
+        inventoryGuardId,
+      )
+    : null;
   const statements = [
+    ...(inventoryGuard ? [inventoryGuard] : []),
     database
       .prepare(
         `INSERT INTO site_settings (
@@ -229,7 +267,14 @@ export async function saveSiteContent(content: SiteContent) {
       ),
     database.prepare("DELETE FROM social_links"),
     database.prepare("DELETE FROM welcome_elements"),
-    database.prepare("DELETE FROM products"),
+    // Products are archived rather than deleted so pending inventory
+    // reservations can still be released safely after a catalog edit.
+    database.prepare(`UPDATE products
+      SET archived = 1,
+          is_visible = 0,
+          is_sellable = 0,
+          slug = '__archived__' || id || '__' || slug
+      WHERE archived = 0`),
     database.prepare("DELETE FROM categories"),
     ...content.categories.map((category) =>
       database
@@ -289,17 +334,67 @@ export async function saveSiteContent(content: SiteContent) {
       database
         .prepare(
           `INSERT INTO products (
-            id, category_id, name, slug, eyebrow, subtitle, description,
-            image_url, video_url, product_url, cta_label, status,
-            accent_color, featured, seller_badge, best_seller_badge,
-            promotion_badge, promotion_percent, is_visible, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, category_id, name, slug, sku, price_cents, currency,
+            is_sellable, inventory_mode, stock_quantity, inventory_revision,
+            fulfillment_mode, archived,
+            eyebrow, subtitle, description, image_url, video_url, product_url,
+            cta_label, status, accent_color, featured, seller_badge,
+            best_seller_badge, promotion_badge, promotion_percent,
+            is_visible, sort_order
+          ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          )
+          ON CONFLICT(id) DO UPDATE SET
+            category_id = excluded.category_id,
+            name = excluded.name,
+            slug = excluded.slug,
+            sku = excluded.sku,
+            price_cents = excluded.price_cents,
+            currency = excluded.currency,
+            is_sellable = excluded.is_sellable,
+            inventory_mode = excluded.inventory_mode,
+            stock_quantity = excluded.stock_quantity,
+            inventory_revision = CASE
+              WHEN products.inventory_mode <> excluded.inventory_mode
+                OR products.stock_quantity <> excluded.stock_quantity
+              THEN products.inventory_revision + 1
+              ELSE products.inventory_revision
+            END,
+            fulfillment_mode = excluded.fulfillment_mode,
+            archived = 0,
+            eyebrow = excluded.eyebrow,
+            subtitle = excluded.subtitle,
+            description = excluded.description,
+            image_url = excluded.image_url,
+            video_url = excluded.video_url,
+            product_url = excluded.product_url,
+            cta_label = excluded.cta_label,
+            status = excluded.status,
+            accent_color = excluded.accent_color,
+            featured = excluded.featured,
+            seller_badge = excluded.seller_badge,
+            best_seller_badge = excluded.best_seller_badge,
+            promotion_badge = excluded.promotion_badge,
+            promotion_percent = excluded.promotion_percent,
+            is_visible = excluded.is_visible,
+            sort_order = excluded.sort_order
+          WHERE products.inventory_revision = excluded.inventory_revision`,
         )
         .bind(
           product.id,
           product.categoryId,
           product.name,
           product.slug,
+          product.sku,
+          product.priceCents,
+          product.currency,
+          product.isSellable ? 1 : 0,
+          product.inventoryMode,
+          product.stockQuantity,
+          product.inventoryRevision,
+          product.fulfillmentMode,
+          0,
           product.eyebrow,
           product.subtitle,
           product.description,
@@ -318,7 +413,27 @@ export async function saveSiteContent(content: SiteContent) {
           product.sortOrder,
         ),
     ),
+    ...(inventoryGuard
+      ? [database.prepare("DELETE FROM content_save_guards WHERE id = ?").bind(inventoryGuardId)]
+      : []),
   ];
 
-  await database.batch(statements);
+  try {
+    await database.batch(statements);
+  } catch (error) {
+    const currentProducts = await getDb().select({
+      id: products.id,
+      inventoryRevision: products.inventoryRevision,
+    }).from(products);
+    const revisions = new Map(currentProducts.map((product) => [
+      product.id,
+      product.inventoryRevision,
+    ]));
+    const staleInventory = content.products.some((product) => {
+      const currentRevision = revisions.get(product.id);
+      return currentRevision !== undefined && currentRevision !== product.inventoryRevision;
+    });
+    if (staleInventory) throw new ContentSaveConflictError();
+    throw error;
+  }
 }

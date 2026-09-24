@@ -14,6 +14,8 @@ const paymentTestEnabled = optional(
   "CLOUDFLARE_PAYMENT_TEST_ENABLED",
   "0",
 );
+const paymentsEnabled = optional("CLOUDFLARE_PAYMENTS_ENABLED", "0");
+const publicSiteUrl = process.env.CLOUDFLARE_PUBLIC_SITE_URL?.trim() || "";
 const workerName = optional("CLOUDFLARE_WORKER_NAME", "vittorin-enterprise");
 const databaseName = optional(
   "CLOUDFLARE_D1_DATABASE_NAME",
@@ -42,6 +44,22 @@ if (paymentTestEnabled === "1" && deploymentEnvironment !== "staging") {
     "O checkout de teste só pode ser ativado com CLOUDFLARE_DEPLOYMENT_ENV=staging.",
   );
 }
+if (!new Set(["0", "1"]).has(paymentsEnabled)) {
+  throw new Error("CLOUDFLARE_PAYMENTS_ENABLED deve ser 0 ou 1.");
+}
+if (paymentsEnabled === "1" && deploymentEnvironment !== "production") {
+  throw new Error(
+    "Cobranças reais só podem ser ativadas com CLOUDFLARE_DEPLOYMENT_ENV=production.",
+  );
+}
+if (paymentsEnabled === "1" && !publicSiteUrl) {
+  throw new Error(
+    "Defina CLOUDFLARE_PUBLIC_SITE_URL antes de ativar cobranças reais.",
+  );
+}
+const normalizedPublicSiteUrl = publicSiteUrl
+  ? normalizePublicSiteUrl(publicSiteUrl)
+  : "";
 
 assertResourceName("CLOUDFLARE_WORKER_NAME", workerName);
 assertResourceName("CLOUDFLARE_D1_DATABASE_NAME", databaseName);
@@ -76,6 +94,8 @@ config.vars = {
   POLICY_AUD: policyAudience,
   DEPLOYMENT_ENV: deploymentEnvironment,
   PAYMENT_TEST_ENABLED: paymentTestEnabled,
+  PAYMENTS_ENABLED: paymentsEnabled,
+  ...(normalizedPublicSiteUrl ? { PUBLIC_SITE_URL: normalizedPublicSiteUrl } : {}),
 };
 config.keep_vars = true;
 config.d1_databases = [
@@ -161,6 +181,32 @@ function normalizeTeamDomain(value) {
   ) {
     throw new Error(
       "CLOUDFLARE_ACCESS_TEAM_DOMAIN deve terminar em .cloudflareaccess.com.",
+    );
+  }
+  return url.origin;
+}
+
+function normalizePublicSiteUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    throw new Error("CLOUDFLARE_PUBLIC_SITE_URL não é uma URL válida.", {
+      cause: error,
+    });
+  }
+
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error(
+      "CLOUDFLARE_PUBLIC_SITE_URL deve ser somente a origem HTTPS pública, sem caminho, consulta ou fragmento.",
     );
   }
   return url.origin;

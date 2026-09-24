@@ -44,8 +44,12 @@ Cadastre estas variáveis de build:
 | `CLOUDFLARE_WORKER_NAME` | `vittorin-enterprise` (opcional) |
 | `CLOUDFLARE_D1_DATABASE_NAME` | `vittorin-enterprise-db` (opcional) |
 | `CLOUDFLARE_R2_BUCKET_NAME` | `vittorin-enterprise-media` (opcional) |
+| `CLOUDFLARE_PAYMENTS_ENABLED` | `0` enquanto cobranças reais não estiverem aprovadas |
+| `CLOUDFLARE_PUBLIC_SITE_URL` | origem HTTPS pública, como `https://vittorin.seudominio.com` (obrigatória para ativar pagamentos) |
 
 O Worker inicializa as tabelas necessárias no D1 de forma idempotente no primeiro acesso. Assim, o deploy conectado ao GitHub não depende de uma etapa manual no console SQL. Se a Cloudflare rejeitar o vínculo D1 por permissão da conta, selecione no Workers Builds um token próprio com **Workers Scripts: Edit**, **Workers R2 Storage: Edit** e **Workers D1: Edit**.
+
+As credenciais do Mercado Pago não são variáveis de build e nunca devem ser salvas no GitHub. Quando chegar o momento da ativação, cadastre-as somente como segredos/variáveis de runtime do Worker conforme [PAYMENTS_PRODUCTION.md](./PAYMENTS_PRODUCTION.md).
 
 ## Atualizar pelo GitHub Desktop
 

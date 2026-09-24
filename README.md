@@ -15,6 +15,8 @@ Site-vitrine oficial da Vittorin Enterprise para aplicativos, tecnologia e inova
 - menu flutuante opcional de contato com botões estilizados para redes sociais;
 - área opcional para vídeo promocional;
 - layout adaptado para desktop, tablet e celular.
+- checkout próprio com preço calculado no servidor e pagamento no Mercado Pago;
+- acompanhamento do pedido sem confiar no retorno do navegador.
 
 ## Estúdio privado
 
@@ -35,6 +37,20 @@ O Estúdio permite editar:
 - até 20 elementos adicionais de recepção, ordenáveis e ocultáveis.
 - até 20 canais de contato, com rede, link, cor, ordem e visibilidade independentes;
 - posição do botão de contato à direita, à esquerda ou centralizado na parte inferior.
+- preço, SKU, disponibilidade, estoque e forma de entrega por produto;
+- painel privado de pedidos, atualização autoritativa, cancelamento, reembolso e conclusão da entrega.
+
+## Comércio e pagamentos
+
+A camada comercial já está preparada, mas cobranças reais permanecem bloqueadas por padrão. Ela exige, ao mesmo tempo:
+
+1. implantação no ambiente `production`;
+2. credenciais produtivas completas do Mercado Pago;
+3. webhook produtivo validado por assinatura;
+4. `PAYMENTS_ENABLED=1`;
+5. produto visível, disponível, vendável e com preço maior que zero.
+
+Sem todas essas condições, nenhum botão de compra real é exibido e a API recusa a criação do pedido. Consulte [PAYMENTS_PRODUCTION.md](./PAYMENTS_PRODUCTION.md) antes da ativação.
 
 ## Dados e mídia
 

@@ -27,7 +27,6 @@ import {
   Type,
   Upload,
 } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -496,10 +495,11 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
   return (
     <main className="studio-shell">
       <aside className="studio-sidebar">
-        <Link href="/" className="studio-brand" aria-label="Voltar para a vitrine">
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Native reload avoids broken vinext client navigation. */}
+        <a href="/" className="studio-brand" aria-label="Voltar para a vitrine">
           <img src="/brand/vittorin-mark.webp" alt="" />
           <div><strong>VITTORIN</strong><span>Estúdio</span></div>
-        </Link>
+        </a>
 
         <div className="studio-sidebar-copy">
           <p className="eyebrow">CENTRAL DE EDIÇÃO</p>
@@ -514,7 +514,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
         <div className="studio-sidebar-actions">
           <ThemeToggle />
           <Button asChild variant="ghost" size="sm">
-            <Link href="/studio/pedidos"><ReceiptText aria-hidden="true" /> Pedidos</Link>
+            <a href="/studio/pedidos"><ReceiptText aria-hidden="true" /> Pedidos</a>
           </Button>
           <Button asChild variant="ghost" size="sm">
             <a href={signOutPath} target="_top"><LogOut aria-hidden="true" /> Sair</a>
@@ -525,7 +525,8 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
       <section className="studio-workspace">
         <header className="studio-toolbar">
           <div>
-            <Link href="/" className="studio-back"><ArrowLeft aria-hidden="true" /> Ver vitrine</Link>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Native reload avoids broken vinext client navigation. */}
+            <a href="/" className="studio-back"><ArrowLeft aria-hidden="true" /> Ver vitrine</a>
             <p>Personalização</p>
           </div>
           <Button className="studio-save" onClick={() => void saveContent()} disabled={saving}>

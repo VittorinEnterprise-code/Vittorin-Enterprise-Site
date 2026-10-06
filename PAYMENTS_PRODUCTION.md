@@ -18,6 +18,8 @@ O código de produção está preparado, mas nasce com a cobrança real desligad
 - confirmação de pagamento somente para `processed` + `accredited`;
 - verificação de vendedor, aplicação, referência, valor, moeda e modo produtivo;
 - painel privado em `/studio/pedidos`, com atualização, cancelamento, reembolso integral e conclusão da entrega;
+- entrega externa persistente e assinada ao Juris, com repetição automática a cada cinco minutos;
+- revogação automática do acesso após reembolso integral ou chargeback;
 - logs estruturados sem token de acesso, segredo ou e-mail do comprador.
 
 ## Trava de ativação
@@ -45,8 +47,15 @@ Cadastre no painel da Cloudflare, nunca no repositório:
 | `PAYMENT_ORDER_TOKEN_SECRET` | Secret | segredo aleatório próprio, com pelo menos 32 caracteres |
 | `MP_SELLER_USER_ID` | Secret ou variável | ID numérico da conta vendedora autenticada |
 | `MP_APPLICATION_ID` | Variável | ID numérico da mesma aplicação Mercado Pago |
+| `JURIS_FULFILLMENT_URL` | Variável | URL HTTPS exata terminada em `/api/entitlements/commerce` no Worker mobile do Juris |
+| `COMMERCE_FULFILLMENT_SECRET` | Secret | segredo compartilhado com o Juris, com pelo menos 32 caracteres |
 
 `PUBLIC_SITE_URL` e `PAYMENTS_ENABLED` são gerados a partir de `CLOUDFLARE_PUBLIC_SITE_URL` e `CLOUDFLARE_PAYMENTS_ENABLED` no Workers Builds.
+
+Para produtos com **Entrega por sistema externo**, o SKU é obrigatório e as duas
+variáveis do Juris também são obrigatórias. Use exatamente o mesmo valor de
+`COMMERCE_FULFILLMENT_SECRET` nos dois Workers; não o reutilize como segredo de
+ativação mobile nem como segredo do Mercado Pago.
 
 Para gerar `PAYMENT_ORDER_TOKEN_SECRET` no PowerShell sem exibi-lo em arquivos:
 
@@ -79,6 +88,7 @@ Documentação oficial: [criação da order](https://www.mercadopago.com.br/deve
 - domínio HTTPS definitivo funcionando;
 - política de privacidade, termos, contato, preço e regras de cancelamento/reembolso publicados;
 - produto configurado no Estúdio com SKU, preço, estoque e forma de entrega;
+- endpoint e segredo de entrega do Juris configurados e testados;
 - webhook produtivo salvo e assinatura configurada;
 - regra de Rate Limiting/WAF da Cloudflare para `POST /api/checkout/orders`;
 - observabilidade e alertas revisados;
@@ -97,3 +107,4 @@ Só depois disso altere `CLOUDFLARE_PAYMENTS_ENABLED` para `1` e faça um novo d
 - Cancelar libera uma reserva de estoque ainda não paga.
 - Reembolsar não repõe estoque automaticamente, pois devolução física ou revogação digital exige decisão operacional.
 - **Concluir entrega** só fica disponível depois da confirmação do pagamento.
+- Na entrega externa, a loja mantém uma fila durável. O pedido só aparece como entregue depois que o Juris confirma a concessão; reembolso ou chargeback enfileira a revogação.

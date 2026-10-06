@@ -11,7 +11,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -205,12 +204,12 @@ export function PaymentTestClient() {
     <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6 lg:py-12">
       <div className="mx-auto max-w-5xl">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <Link href="/studio" className="flex items-center gap-3" aria-label="Voltar ao Estúdio Vittorin">
+          <a href="/studio" className="flex items-center gap-3" aria-label="Voltar ao Estúdio Vittorin">
             <Image src="/brand/vittorin-mark.webp" alt="" width={40} height={40} className="h-10 w-10 rounded-lg object-cover" />
             <span className="flex flex-col text-sm leading-tight"><strong className="tracking-[0.14em]">VITTORIN</strong><span className="text-muted-foreground">Estúdio</span></span>
-          </Link>
+          </a>
           <Button asChild variant="outline" size="sm">
-            <Link href="/studio"><ArrowLeft aria-hidden="true" /> Voltar ao Estúdio</Link>
+            <a href="/studio"><ArrowLeft aria-hidden="true" /> Voltar ao Estúdio</a>
           </Button>
         </header>
 

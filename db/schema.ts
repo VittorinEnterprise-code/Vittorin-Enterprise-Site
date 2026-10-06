@@ -278,6 +278,29 @@ export const paymentWebhookEvents = sqliteTable(
   ],
 );
 
+export const paymentFulfillmentJobs = sqliteTable(
+  "payment_fulfillment_jobs",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id").notNull().references(() => paymentOrders.id, { onDelete: "cascade" }),
+    orderItemId: text("order_item_id").notNull().references(() => paymentOrderItems.id, { onDelete: "cascade" }),
+    action: text("action", { enum: ["grant", "revoke"] }).notNull(),
+    payload: text("payload").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    status: text("status", { enum: ["pending", "processing", "sent", "failed"] }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: integer("next_attempt_at", { mode: "timestamp_ms" }).notNull(),
+    lastError: text("last_error"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    sentAt: integer("sent_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    index("idx_payment_fulfillment_order_status").on(table.orderId, table.status),
+    index("idx_payment_fulfillment_retry").on(table.status, table.nextAttemptAt),
+  ],
+);
+
 // Checkout Pro sandbox orders are deliberately separate from the editable storefront.
 // The immutable item/amount snapshot remains available even when Studio content changes.
 export const paymentTestOrders = sqliteTable(

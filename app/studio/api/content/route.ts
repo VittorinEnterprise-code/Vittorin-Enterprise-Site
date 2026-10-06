@@ -1,6 +1,10 @@
 import { revalidatePath } from "next/cache";
 import { getAuthorizedAdmin } from "@/lib/admin";
-import { loadSiteContent, saveSiteContent } from "@/lib/content-store";
+import {
+  ContentSaveConflictError,
+  loadSiteContent,
+  saveSiteContent,
+} from "@/lib/content-store";
 import { siteContentSchema } from "@/lib/site-validation";
 
 type AccessFailure = Exclude<
@@ -61,8 +65,11 @@ export async function PUT(request: Request) {
 
     await saveSiteContent(parsed.data);
     revalidatePath("/");
-    return Response.json({ content: parsed.data, saved: true });
+    return Response.json({ content: await loadSiteContent(), saved: true });
   } catch (error) {
+    if (error instanceof ContentSaveConflictError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
     console.error("studio_content_save_failed", error);
     return Response.json(
       {

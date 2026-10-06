@@ -18,6 +18,7 @@ import {
   PackagePlus,
   Palette,
   Plus,
+  ReceiptText,
   Save,
   Settings2,
   Share2,
@@ -107,6 +108,13 @@ function slugify(value: string) {
 
 function createId(prefix: string) {
   return `${prefix}-${crypto.randomUUID().slice(0, 12)}`;
+}
+
+function formatPrice(priceCents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(priceCents / 100);
 }
 
 async function readError(response: Response) {
@@ -505,6 +513,9 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
         </div>
         <div className="studio-sidebar-actions">
           <ThemeToggle />
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/studio/pedidos"><ReceiptText aria-hidden="true" /> Pedidos</Link>
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <a href={signOutPath} target="_top"><LogOut aria-hidden="true" /> Sair</a>
           </Button>
@@ -941,7 +952,11 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                     </div>
                     <div className="studio-product-main">
                       <div><strong>{product.name}</strong><span>{product.subtitle || "Sem subtítulo"}</span></div>
-                      <small>{STATUS_LABELS[product.status]} · Ordem {product.sortOrder}</small>
+                      <small>
+                        {STATUS_LABELS[product.status]} · {product.isSellable
+                          ? `${formatPrice(product.priceCents)} · Venda configurada`
+                          : "Venda desativada"} · Ordem {product.sortOrder}
+                      </small>
                     </div>
                     <span className={product.isVisible ? "visibility-live" : "visibility-hidden"}>{product.isVisible ? "Visível" : "Oculto"}</span>
                     <Button variant="outline" size="sm" onClick={() => setProductDraft({ ...product })}>Editar</Button>
@@ -1079,6 +1094,93 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                 <Field label="Ordem"><Input type="number" min={0} value={productDraft.sortOrder} onChange={(e) => setProductDraft({ ...productDraft, sortOrder: Number(e.target.value) || 0 })} /></Field>
                 <Field label="Cor"><div className="color-field"><Input type="color" value={productDraft.accentColor} onChange={(e) => setProductDraft({ ...productDraft, accentColor: e.target.value })} /><Input value={productDraft.accentColor} onChange={(e) => setProductDraft({ ...productDraft, accentColor: e.target.value })} /></div></Field>
               </div>
+              <div className="product-badge-editor">
+                <div>
+                  <strong>Venda, estoque e entrega</strong>
+                  <p>Prepare o produto para o checkout. A cobrança só ficará pública quando o ambiente de pagamentos também estiver ativado.</p>
+                </div>
+                <div className="product-switches">
+                  <div>
+                    <Label>Produto vendável</Label>
+                    <Switch
+                      checked={productDraft.isSellable}
+                      onCheckedChange={(checked) => setProductDraft({ ...productDraft, isSellable: checked })}
+                    />
+                  </div>
+                </div>
+                <div className="studio-form-grid product-form-grid">
+                  <Field label="SKU" hint="Código interno opcional para identificar o produto.">
+                    <Input
+                      value={productDraft.sku}
+                      maxLength={80}
+                      onChange={(event) => setProductDraft({ ...productDraft, sku: event.target.value })}
+                      placeholder="Ex.: JIL-001"
+                    />
+                  </Field>
+                  <Field label="Preço (R$)" hint={`Valor salvo: ${formatPrice(productDraft.priceCents)}`}>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={9_999_999.99}
+                      step="0.01"
+                      value={productDraft.priceCents / 100}
+                      onChange={(event) => setProductDraft({
+                        ...productDraft,
+                        priceCents: Math.min(
+                          999_999_999,
+                          Math.max(0, Math.round((Number(event.target.value) || 0) * 100)),
+                        ),
+                      })}
+                    />
+                  </Field>
+                  <Field label="Controle de estoque">
+                    <Select
+                      value={productDraft.inventoryMode}
+                      onValueChange={(value) => setProductDraft({
+                        ...productDraft,
+                        inventoryMode: value as Product["inventoryMode"],
+                      })}
+                    >
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unlimited">Sem limite de unidades</SelectItem>
+                        <SelectItem value="finite">Quantidade limitada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  {productDraft.inventoryMode === "finite" && (
+                    <Field label="Unidades disponíveis">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={1_000_000}
+                        step={1}
+                        value={productDraft.stockQuantity}
+                        onChange={(event) => setProductDraft({
+                          ...productDraft,
+                          stockQuantity: Math.min(1_000_000, Math.max(0, Math.trunc(Number(event.target.value) || 0))),
+                        })}
+                      />
+                    </Field>
+                  )}
+                  <Field label="Forma de entrega">
+                    <Select
+                      value={productDraft.fulfillmentMode}
+                      onValueChange={(value) => setProductDraft({
+                        ...productDraft,
+                        fulfillmentMode: value as Product["fulfillmentMode"],
+                      })}
+                    >
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">Liberação manual</SelectItem>
+                        <SelectItem value="digital">Entrega digital</SelectItem>
+                        <SelectItem value="external">Entrega por sistema externo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+              </div>
               <Field label="Imagem do produto"><Input value={productDraft.imageUrl} onChange={(e) => setProductDraft({ ...productDraft, imageUrl: e.target.value })} /><MediaUpload accept="image/jpeg,image/png,image/webp,image/gif" label="Enviar imagem do produto" onUploaded={(url) => setProductDraft((draft) => draft ? { ...draft, imageUrl: url } : draft)} /></Field>
               <Field
                 label="Vídeo teaser do produto (opcional)"
@@ -1128,7 +1230,17 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
               </div>
             </div>
           )}
-          <SheetFooter className="product-sheet-footer"><Button variant="outline" onClick={() => setProductDraft(null)}>Cancelar</Button><Button onClick={() => { if (!productDraft?.name.trim() || !productDraft.slug.trim()) { toast.error("Informe o nome e o endereço do produto."); return; } upsertProduct(productDraft); }}><Check /> Aplicar ao rascunho</Button></SheetFooter>
+          <SheetFooter className="product-sheet-footer"><Button variant="outline" onClick={() => setProductDraft(null)}>Cancelar</Button><Button onClick={() => {
+            if (!productDraft?.name.trim() || !productDraft.slug.trim()) {
+              toast.error("Informe o nome e o endereço do produto.");
+              return;
+            }
+            if (productDraft.isSellable && productDraft.priceCents <= 0) {
+              toast.error("Informe um preço maior que zero para liberar a venda.");
+              return;
+            }
+            upsertProduct(productDraft);
+          }}><Check /> Aplicar ao rascunho</Button></SheetFooter>
         </SheetContent>
       </Sheet>
     </main>
@@ -1139,6 +1251,9 @@ function newProduct(order: number): Product {
   const suffix = Date.now().toString(36);
   return {
     id: createId("produto"), categoryId: null, name: "", slug: `produto-${suffix}`,
+    sku: "", priceCents: 0, currency: "BRL", isSellable: false,
+    inventoryMode: "unlimited", stockQuantity: 0, inventoryRevision: 0,
+    fulfillmentMode: "manual",
     eyebrow: "NOVA EXPERIÊNCIA", subtitle: "", description: "", imageUrl: "",
     videoUrl: "", productUrl: "", ctaLabel: "Conhecer produto", status: "coming_soon",
     accentColor: DEFAULT_CONTENT.settings.accentColor, featured: false, isVisible: true,

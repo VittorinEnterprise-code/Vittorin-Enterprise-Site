@@ -12,11 +12,13 @@ const wranglerPath = fileURLToPath(
 
 if (!existsSync(configPath)) {
   throw new Error(
-    "A configuração de produção não existe. Execute pnpm run build:cloudflare primeiro.",
+    "A configuração Cloudflare não existe. Execute pnpm run build:cloudflare primeiro.",
   );
 }
 
-run(["deploy", "--config", configPath]);
+// Keep non-secret variables configured manually in the dashboard. Wrangler
+// already preserves secrets, but without this flag it replaces dashboard vars.
+run(["deploy", "--keep-vars", "--config", configPath]);
 
 function run(arguments_) {
   const result = spawnSync(process.execPath, [wranglerPath, ...arguments_], {

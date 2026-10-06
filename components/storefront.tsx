@@ -74,6 +74,13 @@ function safeMedia(value: string) {
   return link && !link.startsWith("#") ? link : "";
 }
 
+function formatProductPrice(product: Product) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: product.currency,
+  }).format(product.priceCents / 100);
+}
+
 function safeContactLink(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -384,8 +391,11 @@ function WelcomeCard({ element }: { element: WelcomeElement }) {
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const productLink = safeLink(product.productUrl);
+function ProductCard({ product, commerceEnabled }: { product: Product; commerceEnabled: boolean }) {
+  const checkoutEnabled = commerceEnabled && product.isSellable && product.priceCents > 0;
+  const productLink = checkoutEnabled
+    ? `/checkout/${encodeURIComponent(product.slug)}`
+    : safeLink(product.productUrl);
   const teaserUrl = safeMedia(product.videoUrl);
 
   return (
@@ -426,17 +436,20 @@ function ProductCard({ product }: { product: Product }) {
         <p className="eyebrow">{product.eyebrow}</p>
         <h3>{product.name}</h3>
         <p className="product-subtitle">{product.subtitle}</p>
+        {checkoutEnabled && (
+          <p className="product-subtitle"><strong>{formatProductPrice(product)}</strong></p>
+        )}
         <p className="product-description">{product.description}</p>
         <div className="product-actions">
           {productLink ? (
             <a
               className="product-link"
               href={productLink}
-              target={productLink.startsWith("http") ? "_blank" : undefined}
-              rel={productLink.startsWith("http") ? "noreferrer" : undefined}
+              target={!checkoutEnabled && productLink.startsWith("http") ? "_blank" : undefined}
+              rel={!checkoutEnabled && productLink.startsWith("http") ? "noreferrer" : undefined}
             >
-              {product.ctaLabel}
-              <ExternalLink aria-hidden="true" />
+              {checkoutEnabled ? "Comprar agora" : product.ctaLabel}
+              {checkoutEnabled ? <ArrowRight aria-hidden="true" /> : <ExternalLink aria-hidden="true" />}
             </a>
           ) : (
             <span className="product-link product-link-disabled">
@@ -476,7 +489,13 @@ function ProductCard({ product }: { product: Product }) {
   );
 }
 
-export function Storefront({ content }: { content: SiteContent }) {
+export function Storefront({
+  content,
+  commerceEnabled = false,
+}: {
+  content: SiteContent;
+  commerceEnabled?: boolean;
+}) {
   const { settings, appearance, socialSettings } = content;
   const visibleCategories = useMemo(
     () => content.categories.filter((category) => category.isVisible),
@@ -744,7 +763,13 @@ export function Storefront({ content }: { content: SiteContent }) {
               "--grid-columns": Math.min(4, Math.max(1, settings.gridColumns)),
             } as React.CSSProperties}
           >
-            {products.map((product) => <ProductCard key={product.id} product={product} />)}
+            {products.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                commerceEnabled={commerceEnabled}
+              />
+            ))}
           </div>
         ) : (
           <div className="empty-catalog">

@@ -98,6 +98,14 @@ export type Product = {
   categoryId: string | null;
   name: string;
   slug: string;
+  sku: string;
+  priceCents: number;
+  currency: "BRL";
+  isSellable: boolean;
+  inventoryMode: "unlimited" | "finite";
+  stockQuantity: number;
+  inventoryRevision: number;
+  fulfillmentMode: "manual" | "digital" | "external";
   eyebrow: string;
   subtitle: string;
   description: string;
@@ -242,6 +250,14 @@ export const DEFAULT_CONTENT: SiteContent = {
       categoryId: "legal-tech",
       name: "Juris Immersive Learn",
       slug: "juris-immersive-learn",
+      sku: "",
+      priceCents: 0,
+      currency: "BRL",
+      isSellable: false,
+      inventoryMode: "unlimited",
+      stockQuantity: 0,
+      inventoryRevision: 0,
+      fulfillmentMode: "manual",
       eyebrow: "APRENDIZADO IMERSIVO",
       subtitle: "O Direito deixa de ser abstrato.",
       description:

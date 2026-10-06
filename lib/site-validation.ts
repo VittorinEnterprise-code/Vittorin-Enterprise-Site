@@ -127,6 +127,14 @@ export const siteContentSchema = z
           categoryId: id.nullable(),
           name: z.string().min(1).max(120),
           slug,
+          sku: z.string().max(80),
+          priceCents: z.number().int().min(0).max(999_999_999),
+          currency: z.literal("BRL"),
+          isSellable: z.boolean(),
+          inventoryMode: z.enum(["unlimited", "finite"]),
+          stockQuantity: z.number().int().min(0).max(1_000_000),
+          inventoryRevision: z.number().int().min(0).max(2_147_483_647),
+          fulfillmentMode: z.enum(["manual", "digital", "external"]),
           eyebrow: shortText,
           subtitle: shortText,
           description: longText,
@@ -229,6 +237,13 @@ export const siteContentSchema = z
           code: "custom",
           path: ["products", index, "categoryId"],
           message: "A categoria selecionada não existe.",
+        });
+      }
+      if (product.isSellable && product.priceCents <= 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["products", index, "priceCents"],
+          message: "Informe um preço maior que zero antes de liberar a venda.",
         });
       }
       productIds.add(product.id);

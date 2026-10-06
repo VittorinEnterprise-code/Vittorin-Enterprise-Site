@@ -1,4 +1,5 @@
 import { Storefront } from "@/components/storefront";
+import { isProductionCommerceEnabled } from "@/lib/commerce-config";
 import { loadSiteContent } from "@/lib/content-store";
 import { DEFAULT_CONTENT } from "@/lib/site-content";
 
@@ -13,5 +14,10 @@ export default async function Home() {
     // Keep the public storefront available while storage is temporarily unavailable.
   }
 
-  return <Storefront content={content} />;
+  return (
+    <Storefront
+      content={content}
+      commerceEnabled={isProductionCommerceEnabled()}
+    />
+  );
 }

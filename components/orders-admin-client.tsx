@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -110,9 +109,9 @@ export function OrdersAdminClient({
       <div className="mx-auto max-w-6xl">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <Link href="/studio" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <a href="/studio" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar ao Estúdio
-            </Link>
+            </a>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight">Pedidos</h1>
             <p className="mt-2 text-sm text-muted-foreground">A confirmação exibida vem diretamente do Mercado Pago.</p>
           </div>

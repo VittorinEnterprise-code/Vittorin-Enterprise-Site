@@ -9,6 +9,11 @@ export type CommerceConfiguration = {
   publicSiteUrl: string;
 };
 
+export type ExternalFulfillmentConfiguration = {
+  endpoint: string;
+  secret: string;
+};
+
 function normalizedPublicSiteUrl(value: string | undefined) {
   if (!value) return null;
   try {
@@ -69,6 +74,36 @@ export function getCommerceConfiguration(): CommerceConfiguration | null {
 
 export function isProductionCommerceEnabled() {
   return env.PAYMENTS_ENABLED === "1" && getCommerceConfiguration() !== null;
+}
+
+export function getExternalFulfillmentConfiguration(): ExternalFulfillmentConfiguration | null {
+  if (env.DEPLOYMENT_ENV !== "production" || env.SITES_VALIDATION_AUTH === "1") return null;
+  const secret = env.COMMERCE_FULFILLMENT_SECRET?.trim() || "";
+  const input = env.JURIS_FULFILLMENT_URL?.trim() || "";
+  if (secret.length < 32 || !input) return null;
+  try {
+    const url = new URL(input);
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.port ||
+      url.pathname !== "/api/entitlements/commerce" ||
+      url.search ||
+      url.hash
+    ) return null;
+    return { endpoint: url.toString(), secret };
+  } catch {
+    return null;
+  }
+}
+
+export function requireExternalFulfillmentConfiguration() {
+  const configuration = getExternalFulfillmentConfiguration();
+  if (!configuration) {
+    throw new CommerceUnavailableError("A entrega automática deste produto ainda não foi configurada.");
+  }
+  return configuration;
 }
 
 export function requireCommerceConfiguration() {

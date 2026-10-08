@@ -112,6 +112,10 @@ config.r2_buckets = [
   },
 ];
 config.observability = { enabled: true };
+config.triggers = {
+  ...(config.triggers ?? {}),
+  crons: ["*/5 * * * *"],
+};
 
 await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 

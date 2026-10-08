@@ -10,7 +10,6 @@ import {
   Plus,
   ShieldCheck,
 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,13 +266,14 @@ export function CheckoutClient({ product, commerceEnabled }: CheckoutClientProps
     <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:py-10">
       <div className="mx-auto max-w-6xl">
         <header className="flex items-center justify-between gap-4">
-          <Link
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Native reload avoids broken vinext client navigation. */}
+          <a
             href="/"
             className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Voltar à vitrine
-          </Link>
+          </a>
           <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             Ambiente protegido

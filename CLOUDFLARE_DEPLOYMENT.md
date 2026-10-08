@@ -7,7 +7,9 @@ Este projeto usa quatro recursos independentes da conta:
 - **R2** para imagens, vídeos, MP3 e fontes enviados;
 - **Cloudflare Access** para restringir `/studio*` ao e-mail `vittorinoenterprise@gmail.com`.
 
-O Juris Immersive não é alterado. Use nomes próprios para os recursos da Vittorin.
+Os recursos da loja continuam separados dos recursos do Juris Immersive. A única
+integração entre os Workers é o endpoint de entrega assinado descrito em
+`PAYMENTS_PRODUCTION.md`; não compartilhe D1, R2 ou credenciais do Mercado Pago.
 
 ## 1. Criar os recursos
 

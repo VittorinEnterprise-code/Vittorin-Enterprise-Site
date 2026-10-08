@@ -16,5 +16,7 @@ declare namespace Cloudflare {
     MP_APPLICATION_ID?: string;
     MP_WEBHOOK_SECRET?: string;
     PAYMENT_ORDER_TOKEN_SECRET?: string;
+    JURIS_FULFILLMENT_URL?: string;
+    COMMERCE_FULFILLMENT_SECRET?: string;
   }
 }

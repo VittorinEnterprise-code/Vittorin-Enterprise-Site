@@ -171,6 +171,29 @@ export async function ensureDatabaseSchema() {
         database.prepare(
           "CREATE INDEX IF NOT EXISTS idx_payment_webhook_created_at ON payment_webhook_events (created_at)",
         ),
+        database.prepare(`CREATE TABLE IF NOT EXISTS payment_fulfillment_jobs (
+          id text PRIMARY KEY NOT NULL,
+          order_id text NOT NULL,
+          order_item_id text NOT NULL,
+          action text NOT NULL,
+          payload text NOT NULL,
+          payload_hash text NOT NULL,
+          status text NOT NULL,
+          attempts integer NOT NULL DEFAULT 0,
+          next_attempt_at integer NOT NULL,
+          last_error text,
+          created_at integer NOT NULL,
+          updated_at integer NOT NULL,
+          sent_at integer,
+          FOREIGN KEY (order_id) REFERENCES payment_orders(id) ON DELETE CASCADE,
+          FOREIGN KEY (order_item_id) REFERENCES payment_order_items(id) ON DELETE CASCADE
+        )`),
+        database.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_payment_fulfillment_order_status ON payment_fulfillment_jobs (order_id, status)",
+        ),
+        database.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_payment_fulfillment_retry ON payment_fulfillment_jobs (status, next_attempt_at)",
+        ),
         database.prepare(`CREATE TABLE IF NOT EXISTS site_settings (
           id integer PRIMARY KEY NOT NULL,
           brand_name text NOT NULL,

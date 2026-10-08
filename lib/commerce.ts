@@ -12,9 +12,14 @@ import {
   type CommerceConfiguration,
   getCommerceConfiguration,
   isProductionCommerceEnabled,
+  requireExternalFulfillmentConfiguration,
   requireCommerceConfiguration,
   requireNewOrderConfiguration,
 } from "@/lib/commerce-config";
+import {
+  scheduleExternalFulfillmentRetry,
+  syncExternalFulfillmentForOrder,
+} from "@/lib/external-fulfillment";
 import {
   createMercadoPagoOrder,
   cancelMercadoPagoOrder,
@@ -179,6 +184,12 @@ export async function createCommerceOrder(input: {
     }
     return { product, quantity: item.quantity, totalCents, itemId: crypto.randomUUID() };
   });
+  if (snapshots.some(({ product }) => product.fulfillmentMode === "external")) {
+    if (snapshots.some(({ product }) => product.fulfillmentMode === "external" && !product.sku.trim())) {
+      throw new CommerceError(409, "O produto ainda não possui um SKU para a entrega automática.", "external_sku_missing");
+    }
+    requireExternalFulfillmentConfiguration();
+  }
   const totalCents = snapshots.reduce((total, item) => total + item.totalCents, 0);
   if (!Number.isSafeInteger(totalCents) || totalCents < 100 || totalCents > 10_000_000) {
     throw new CommerceError(400, "O valor total do pedido é inválido.", "amount_invalid");
@@ -715,7 +726,18 @@ export async function getPublicCommerceOrder(orderId: string, publicToken: strin
       }));
     }
   }
-  return toPublicOrder(row);
+  try {
+    await syncExternalFulfillmentForOrder(row.id);
+    const refreshed = await getDb().select().from(paymentOrders).where(eq(paymentOrders.id, row.id)).get();
+    return toPublicOrder(refreshed ?? row);
+  } catch (error) {
+    console.warn(JSON.stringify({
+      event: "commerce_public_fulfillment_retry_failed",
+      orderId: row.id,
+      reason: safeProviderFailure(error),
+    }));
+    return toPublicOrder(row);
+  }
 }
 
 export async function refreshCommerceOrder(orderId: string) {
@@ -805,6 +827,22 @@ export async function completeCommerceFulfillment(orderId: string) {
       409,
       "A entrega só pode ser concluída depois da confirmação do pagamento.",
       "fulfillment_not_ready",
+    );
+  }
+  const blockedExternalItem = await getD1Binding().prepare(`
+    SELECT i.id FROM payment_order_items i
+    WHERE i.order_id = ? AND i.fulfillment_mode = 'external'
+      AND NOT EXISTS (
+        SELECT 1 FROM payment_fulfillment_jobs j
+        WHERE j.order_item_id = i.id AND j.action = 'grant' AND j.status = 'sent'
+      )
+    LIMIT 1
+  `).bind(orderId).first<{ id: string }>();
+  if (blockedExternalItem) {
+    throw new CommerceError(
+      409,
+      "A liberação automática deste pedido ainda está sendo processada.",
+      "external_fulfillment_pending",
     );
   }
   if (row.fulfillmentStatus !== "completed") {
@@ -914,6 +952,7 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
   await ensureDatabaseSchema();
   const configuration = getCommerceConfiguration();
   if (configuration) await recoverOneStaleUncreatedOrder(configuration);
+  scheduleExternalFulfillmentRetry();
   const safeLimit = Math.min(200, Math.max(1, Math.trunc(limit)));
   return getDb().select({
     id: paymentOrders.id,
@@ -1057,7 +1096,18 @@ async function applyAuthoritativeProviderOrder(
   const updated = await db.select().from(paymentOrders)
     .where(eq(paymentOrders.id, localOrder.id)).get();
   if (!updated) throw new Error("payment_order_disappeared");
-  return toPublicOrder(updated);
+  try {
+    await syncExternalFulfillmentForOrder(updated.id);
+  } catch (error) {
+    console.warn(JSON.stringify({
+      event: "external_fulfillment_sync_failed",
+      orderId: updated.id,
+      reason: safeProviderFailure(error),
+    }));
+  }
+  const fulfilled = await db.select().from(paymentOrders)
+    .where(eq(paymentOrders.id, localOrder.id)).get();
+  return toPublicOrder(fulfilled ?? updated);
 }
 
 function validateProviderOrder(

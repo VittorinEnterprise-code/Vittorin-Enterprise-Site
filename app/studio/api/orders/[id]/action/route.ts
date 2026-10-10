@@ -62,4 +62,3 @@ export async function POST(
     return json({ error: "Não foi possível concluir a ação agora." }, 502);
   }
 }
-

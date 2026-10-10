@@ -14,6 +14,8 @@ test("external fulfillment is persisted, signed, retried and kept outside the we
 
   assert.match(database, /CREATE TABLE IF NOT EXISTS payment_fulfillment_jobs/);
   assert.match(fulfillment, /x-vittorin-signature/);
+  assert.match(fulfillment, /redirect: "manual"/);
+  assert.doesNotMatch(fulfillment, /redirect: "error"/);
   assert.match(fulfillment, /waitUntil\(dispatchExternalFulfillmentForOrder/);
   assert.match(fulfillment, /retryExternalFulfillmentForOrderNow/);
   assert.match(fulfillment, /WHERE order_id = \? AND status IN \('pending', 'failed'\)/);

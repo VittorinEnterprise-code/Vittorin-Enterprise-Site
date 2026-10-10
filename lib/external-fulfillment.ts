@@ -142,7 +142,7 @@ async function dispatchJob(id: string) {
         "x-vittorin-signature": await sign(configuration.secret, `${timestamp}.${claimed.payload}`),
       },
       body: claimed.payload,
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(8_000),
     });
     if (!response.ok) throw new Error(`fulfillment_http_${response.status}`);

@@ -24,6 +24,7 @@ test("external fulfillment is persisted, signed, retried and kept outside the we
   assert.match(worker, /scheduled\(/);
   assert.match(worker, /retryExternalFulfillment\(5\)/);
   assert.match(cloudflareConfig, /crons: \["\*\/5 \* \* \* \*"\]/);
+  assert.match(cloudflareConfig, /global_fetch_strictly_public/);
 });
 
 test("manual completion cannot bypass an unfinished external delivery", () => {

@@ -47,7 +47,7 @@ Cadastre no painel da Cloudflare, nunca no repositório:
 | `PAYMENT_ORDER_TOKEN_SECRET` | Secret | segredo aleatório próprio, com pelo menos 32 caracteres |
 | `MP_SELLER_USER_ID` | Secret ou variável | ID numérico da conta vendedora autenticada |
 | `MP_APPLICATION_ID` | Variável | ID numérico da mesma aplicação Mercado Pago |
-| `JURIS_FULFILLMENT_URL` | Variável | URL HTTPS exata terminada em `/api/entitlements/commerce` no Worker mobile do Juris |
+| `JURIS_FULFILLMENT_URL` | Variável | URL HTTPS exata terminada em `/api/entitlements/commerce` no Worker principal `juris-immersive-learn` |
 | `COMMERCE_FULFILLMENT_SECRET` | Secret | segredo compartilhado com o Juris, com pelo menos 32 caracteres |
 
 `PUBLIC_SITE_URL` e `PAYMENTS_ENABLED` são gerados a partir de `CLOUDFLARE_PUBLIC_SITE_URL` e `CLOUDFLARE_PAYMENTS_ENABLED` no Workers Builds.

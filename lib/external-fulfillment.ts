@@ -193,6 +193,25 @@ export async function syncExternalFulfillmentForOrder(orderId: string) {
   }));
 }
 
+export async function retryExternalFulfillmentForOrderNow(orderId: string) {
+  if (env.SITES_VALIDATION_AUTH === "1") return;
+  await ensureDatabaseSchema();
+  await enqueue(orderId);
+  const now = Date.now();
+  const jobs = await getD1Binding().prepare(`
+    UPDATE payment_fulfillment_jobs
+    SET next_attempt_at = ?, updated_at = ?
+    WHERE order_id = ? AND status IN ('pending', 'failed')
+    RETURNING id
+  `).bind(now, now, orderId).all<{ id: string }>();
+  for (const job of jobs.results ?? []) await dispatchJob(job.id);
+  const staleJobs = await getD1Binding().prepare(`
+    SELECT id FROM payment_fulfillment_jobs
+    WHERE order_id = ? AND status = 'processing' AND updated_at <= ?
+  `).bind(orderId, now - 5 * 60 * 1000).all<{ id: string }>();
+  for (const job of staleJobs.results ?? []) await dispatchJob(job.id);
+}
+
 async function dispatchExternalFulfillmentForOrder(orderId: string) {
   const jobs = await getD1Binding().prepare(`
     SELECT id FROM payment_fulfillment_jobs
@@ -223,3 +242,4 @@ export function scheduleExternalFulfillmentRetry(limit = 3) {
     }));
   }));
 }
+

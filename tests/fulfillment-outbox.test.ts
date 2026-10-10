@@ -39,8 +39,10 @@ test("admin can force and await an external fulfillment retry", () => {
   assert.match(commerce, /export async function retryCommerceFulfillment/);
   assert.match(commerce, /await retryExternalFulfillmentForOrderNow\(orderId\)/);
   assert.match(commerce, /externalFulfillmentLastError/);
+  assert.match(commerce, /externalFulfillmentEndpoint/);
   assert.match(route, /retry_fulfillment: retryCommerceFulfillment/);
   assert.match(admin, /Tentar liberação agora/);
+  assert.match(admin, /Destino usado:/);
   assert.match(admin, /O segredo da loja não coincide com o segredo do Juris/);
   assert.match(admin, /endereço público do Worker juris-immersive-mobile/);
   assert.match(admin, /endpoint não existe neste Worker/);

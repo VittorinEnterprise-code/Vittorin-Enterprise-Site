@@ -228,4 +228,3 @@ export function OrdersAdminClient({
     </main>
   );
 }
-

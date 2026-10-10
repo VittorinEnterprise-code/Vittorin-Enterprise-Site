@@ -15,6 +15,7 @@ type AdminOrder = {
   fulfillmentStatus: string;
   hasManualFulfillment: boolean;
   hasExternalFulfillment: boolean;
+  externalFulfillmentEndpoint: string | null;
   externalFulfillmentStatus: string | null;
   externalFulfillmentAttempts: number;
   externalFulfillmentNextAttemptAt: number | null;
@@ -185,6 +186,11 @@ export function OrdersAdminClient({
                         <p>Próxima tentativa automática: {date(order.externalFulfillmentNextAttemptAt)}</p>
                       ) : null}
                     </div>
+                  ) : null}
+                  {order.hasExternalFulfillment ? (
+                    <p className="mt-2 break-all text-xs text-muted-foreground">
+                      Destino usado: {order.externalFulfillmentEndpoint ?? "Configuração inválida"}
+                    </p>
                   ) : null}
                 </div>
               </dl>

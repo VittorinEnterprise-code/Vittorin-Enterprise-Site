@@ -108,4 +108,3 @@ Só depois disso altere `CLOUDFLARE_PAYMENTS_ENABLED` para `1` e faça um novo d
 - Reembolsar não repõe estoque automaticamente, pois devolução física ou revogação digital exige decisão operacional.
 - **Concluir entrega** só fica disponível depois da confirmação do pagamento.
 - Na entrega externa, a loja mantém uma fila durável. O pedido só aparece como entregue depois que o Juris confirma a concessão; reembolso ou chargeback enfileira a revogação.
-

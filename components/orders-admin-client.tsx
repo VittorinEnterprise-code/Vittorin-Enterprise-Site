@@ -13,6 +13,8 @@ type AdminOrder = {
   totalCents: number;
   currency: string;
   fulfillmentStatus: string;
+  hasManualFulfillment: boolean;
+  hasExternalFulfillment: boolean;
   externalFulfillmentStatus: string | null;
   externalFulfillmentAttempts: number;
   externalFulfillmentNextAttemptAt: number | null;
@@ -184,12 +186,14 @@ export function OrdersAdminClient({
               </dl>
               <div className="mt-5 flex justify-end">
                 <div className="flex flex-wrap justify-end gap-2">
-                  {order.status === "paid" && order.fulfillmentStatus === "ready" && !order.externalFulfillmentStatus ? (
+                  {order.status === "paid" && order.fulfillmentStatus === "ready" && order.hasManualFulfillment
+                    && (!order.hasExternalFulfillment || order.externalFulfillmentStatus === "sent") ? (
                     <Button type="button" variant="outline" onClick={() => void runAction(order.id, "complete")} disabled={updatingId === order.id}>
                       Concluir entrega
                     </Button>
                   ) : null}
-                  {order.status === "paid" && order.fulfillmentStatus === "ready" && order.externalFulfillmentStatus ? (
+                  {order.status === "paid" && order.fulfillmentStatus === "ready" && order.hasExternalFulfillment
+                    && order.externalFulfillmentStatus !== "sent" ? (
                     <Button
                       type="button"
                       variant="outline"

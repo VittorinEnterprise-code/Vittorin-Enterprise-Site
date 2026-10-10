@@ -41,4 +41,3 @@ test("admin can force and await an external fulfillment retry", () => {
   assert.match(admin, /Tentar liberação agora/);
   assert.match(admin, /O segredo da loja não coincide com o segredo do Juris/);
 });
-

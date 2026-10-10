@@ -6,13 +6,14 @@ import {
   completeCommerceFulfillment,
   refreshCommerceOrder,
   refundCommerceOrder,
+  retryCommerceFulfillment,
 } from "@/lib/commerce";
 import { CommerceUnavailableError } from "@/lib/commerce-config";
 import { readBoundedJson } from "@/lib/mercado-pago";
 
 const identifierSchema = z.string().uuid();
 const actionSchema = z.object({
-  action: z.enum(["refresh", "cancel", "refund", "complete"]),
+  action: z.enum(["refresh", "cancel", "refund", "complete", "retry_fulfillment"]),
 });
 
 function json(body: object, status = 200) {
@@ -44,6 +45,7 @@ export async function POST(
       cancel: cancelCommerceOrder,
       refund: refundCommerceOrder,
       complete: completeCommerceFulfillment,
+      retry_fulfillment: retryCommerceFulfillment,
     } as const)[parsedAction.data.action](parsedId.data);
     return json({ order });
   } catch (error) {
@@ -60,3 +62,4 @@ export async function POST(
     return json({ error: "Não foi possível concluir a ação agora." }, 502);
   }
 }
+

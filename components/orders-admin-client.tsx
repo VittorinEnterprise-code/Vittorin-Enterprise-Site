@@ -13,6 +13,10 @@ type AdminOrder = {
   totalCents: number;
   currency: string;
   fulfillmentStatus: string;
+  externalFulfillmentStatus: string | null;
+  externalFulfillmentAttempts: number;
+  externalFulfillmentNextAttemptAt: number | null;
+  externalFulfillmentLastError: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -40,6 +44,25 @@ function statusLabel(status: string) {
   } as Record<string, string>)[status] ?? status;
 }
 
+function fulfillmentStatusLabel(status: string | null) {
+  return ({
+    pending: "Aguardando envio",
+    processing: "Enviando agora",
+    failed: "Falha na última tentativa",
+    sent: "Liberação confirmada",
+  } as Record<string, string>)[status ?? ""] ?? status;
+}
+
+function fulfillmentFailureLabel(reason: string | null) {
+  if (!reason) return "";
+  if (reason === "fulfillment_http_401") return "O segredo da loja não coincide com o segredo do Juris.";
+  if (reason === "fulfillment_http_404") return "O endpoint de liberação não foi encontrado no Juris.";
+  if (reason === "fulfillment_http_503") return "O Juris recebeu a solicitação, mas não conseguiu concluí-la.";
+  if (reason === "fulfillment_not_configured") return "A integração externa da loja está incompleta.";
+  if (reason.includes("timeout")) return "O Juris demorou além do limite para responder.";
+  return `Falha técnica: ${reason}`;
+}
+
 export function OrdersAdminClient({
   initialOrders,
   loadError,
@@ -53,7 +76,7 @@ export function OrdersAdminClient({
 
   const runAction = async (
     id: string,
-    action: "refresh" | "cancel" | "refund" | "complete",
+    action: "refresh" | "cancel" | "refund" | "complete" | "retry_fulfillment",
   ) => {
     if (
       action === "cancel" &&
@@ -82,7 +105,7 @@ export function OrdersAdminClient({
       if (!response.ok || !payload?.order) {
         throw new Error(payload?.error || "Não foi possível atualizar o pedido.");
       }
-      if (action === "refresh" && !orders.find((order) => order.id === id)?.providerOrderId) {
+      if (action === "refresh" || action === "retry_fulfillment") {
         window.location.reload();
         return;
       }
@@ -142,13 +165,39 @@ export function OrdersAdminClient({
               <dl className="mt-5 grid gap-3 border-t border-border pt-5 text-sm sm:grid-cols-3">
                 <div><dt className="text-muted-foreground">Comprador</dt><dd className="mt-1 break-all">{order.buyerEmail}</dd></div>
                 <div><dt className="text-muted-foreground">Referência Mercado Pago</dt><dd className="mt-1 break-all">{order.providerOrderId ?? "Ainda não recebida"}</dd></div>
-                <div><dt className="text-muted-foreground">Entrega</dt><dd className="mt-1">{order.fulfillmentStatus}</dd></div>
+                <div>
+                  <dt className="text-muted-foreground">Entrega</dt>
+                  <dd className="mt-1">{order.fulfillmentStatus}</dd>
+                  {order.externalFulfillmentStatus ? (
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <p>Automação: {fulfillmentStatusLabel(order.externalFulfillmentStatus)}</p>
+                      <p>Tentativas: {order.externalFulfillmentAttempts}</p>
+                      {order.externalFulfillmentStatus === "failed" && order.externalFulfillmentLastError ? (
+                        <p className="text-destructive">{fulfillmentFailureLabel(order.externalFulfillmentLastError)}</p>
+                      ) : null}
+                      {order.externalFulfillmentStatus === "failed" && order.externalFulfillmentNextAttemptAt ? (
+                        <p>Próxima tentativa automática: {date(order.externalFulfillmentNextAttemptAt)}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </dl>
               <div className="mt-5 flex justify-end">
                 <div className="flex flex-wrap justify-end gap-2">
-                  {order.status === "paid" && order.fulfillmentStatus === "ready" ? (
+                  {order.status === "paid" && order.fulfillmentStatus === "ready" && !order.externalFulfillmentStatus ? (
                     <Button type="button" variant="outline" onClick={() => void runAction(order.id, "complete")} disabled={updatingId === order.id}>
                       Concluir entrega
+                    </Button>
+                  ) : null}
+                  {order.status === "paid" && order.fulfillmentStatus === "ready" && order.externalFulfillmentStatus ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void runAction(order.id, "retry_fulfillment")}
+                      disabled={updatingId === order.id || order.externalFulfillmentStatus === "processing"}
+                    >
+                      {updatingId === order.id ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                      Tentar liberação agora
                     </Button>
                   ) : null}
                   {["pending", "review"].includes(order.status) && order.providerOrderId ? (
@@ -179,3 +228,4 @@ export function OrdersAdminClient({
     </main>
   );
 }
+

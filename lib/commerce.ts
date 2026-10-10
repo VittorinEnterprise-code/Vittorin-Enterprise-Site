@@ -11,6 +11,7 @@ import {
 import {
   type CommerceConfiguration,
   getCommerceConfiguration,
+  getExternalFulfillmentConfiguration,
   isProductionCommerceEnabled,
   requireExternalFulfillmentConfiguration,
   requireCommerceConfiguration,
@@ -982,6 +983,7 @@ export async function processMercadoPagoWebhook(input: {
 export async function listCommerceOrdersForAdmin(limit = 100) {
   await ensureDatabaseSchema();
   const configuration = getCommerceConfiguration();
+  const externalConfiguration = getExternalFulfillmentConfiguration();
   if (configuration) await recoverOneStaleUncreatedOrder(configuration);
   scheduleExternalFulfillmentRetry();
   const safeLimit = Math.min(200, Math.max(1, Math.trunc(limit)));
@@ -1063,6 +1065,7 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
       ...order,
       hasManualFulfillment: mode?.hasManualFulfillment ?? false,
       hasExternalFulfillment: mode?.hasExternalFulfillment ?? false,
+      externalFulfillmentEndpoint: externalConfiguration?.endpoint ?? null,
       externalFulfillmentStatus: job?.status ?? null,
       externalFulfillmentAttempts: job?.attempts ?? 0,
       externalFulfillmentNextAttemptAt: job?.nextAttemptAt ?? null,

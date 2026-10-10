@@ -997,14 +997,28 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
     createdAt: paymentOrders.createdAt,
     updatedAt: paymentOrders.updatedAt,
   }).from(paymentOrders).orderBy(desc(paymentOrders.createdAt)).limit(safeLimit);
+  if (orders.length === 0) return [];
+  const orderIds = orders.map((order) => order.id);
+  const orderPlaceholders = orderIds.map(() => "?").join(", ");
+  const modeResult = await getD1Binding().prepare(`
+    SELECT order_id AS orderId,
+      MAX(CASE WHEN fulfillment_mode = 'manual' THEN 1 ELSE 0 END) AS hasManualFulfillment,
+      MAX(CASE WHEN fulfillment_mode = 'external' THEN 1 ELSE 0 END) AS hasExternalFulfillment
+    FROM payment_order_items
+    WHERE order_id IN (${orderPlaceholders})
+    GROUP BY order_id
+  `).bind(...orderIds).all<{
+    orderId: string;
+    hasManualFulfillment: number;
+    hasExternalFulfillment: number;
+  }>();
   const jobResult = await getD1Binding().prepare(`
     SELECT order_id AS orderId, status, attempts,
       next_attempt_at AS nextAttemptAt, last_error AS lastError, updated_at AS updatedAt
     FROM payment_fulfillment_jobs
-    WHERE action = 'grant'
+    WHERE action = 'grant' AND order_id IN (${orderPlaceholders})
     ORDER BY updated_at DESC
-    LIMIT ?
-  `).bind(Math.max(20, safeLimit * 4)).all<{
+  `).bind(...orderIds).all<{
     orderId: string;
     status: string;
     attempts: number;
@@ -1012,6 +1026,12 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
     lastError: string | null;
     updatedAt: number;
   }>();
+  const modeByOrder = new Map(
+    (modeResult.results ?? []).map((mode) => [mode.orderId, {
+      hasManualFulfillment: mode.hasManualFulfillment === 1,
+      hasExternalFulfillment: mode.hasExternalFulfillment === 1,
+    }]),
+  );
   const jobByOrder = new Map<string, {
     status: string;
     attempts: number;
@@ -1038,8 +1058,11 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
   }
   return orders.map((order) => {
     const job = jobByOrder.get(order.id);
+    const mode = modeByOrder.get(order.id);
     return {
       ...order,
+      hasManualFulfillment: mode?.hasManualFulfillment ?? false,
+      hasExternalFulfillment: mode?.hasExternalFulfillment ?? false,
       externalFulfillmentStatus: job?.status ?? null,
       externalFulfillmentAttempts: job?.attempts ?? 0,
       externalFulfillmentNextAttemptAt: job?.nextAttemptAt ?? null,

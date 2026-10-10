@@ -41,3 +41,14 @@ test("admin can force and await an external fulfillment retry", () => {
   assert.match(admin, /Tentar liberação agora/);
   assert.match(admin, /O segredo da loja não coincide com o segredo do Juris/);
 });
+
+test("mixed fulfillment keeps manual completion available after the external grant", () => {
+  const commerce = source("lib/commerce.ts");
+  const admin = source("components/orders-admin-client.tsx");
+  assert.match(commerce, /hasManualFulfillment/);
+  assert.match(commerce, /hasExternalFulfillment/);
+  assert.match(commerce, /WHERE action = 'grant' AND order_id IN/);
+  assert.match(admin, /order\.hasManualFulfillment/);
+  assert.match(admin, /order\.externalFulfillmentStatus === "sent"/);
+  assert.match(admin, /order\.externalFulfillmentStatus !== "sent"/);
+});

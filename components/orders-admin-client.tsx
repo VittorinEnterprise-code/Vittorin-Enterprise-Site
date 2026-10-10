@@ -61,6 +61,7 @@ function fulfillmentFailureLabel(reason: string | null) {
   if (reason === "fulfillment_http_404") return "O endpoint de liberação não foi encontrado no Juris.";
   if (reason === "fulfillment_http_503") return "O Juris recebeu a solicitação, mas não conseguiu concluí-la.";
   if (reason === "fulfillment_not_configured") return "A integração externa da loja está incompleta.";
+  if (reason.startsWith("Invalid_redirect_value")) return "A configuração de rede da loja é incompatível com a Cloudflare.";
   if (reason.includes("timeout")) return "O Juris demorou além do limite para responder.";
   return `Falha técnica: ${reason}`;
 }

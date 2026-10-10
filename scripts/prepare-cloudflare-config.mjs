@@ -88,6 +88,14 @@ try {
 }
 
 config.name = workerName;
+config.compatibility_flags = [
+  ...new Set([
+    ...(Array.isArray(config.compatibility_flags)
+      ? config.compatibility_flags
+      : []),
+    "global_fetch_strictly_public",
+  ]),
+];
 config.vars = {
   ...(config.vars ?? {}),
   TEAM_DOMAIN: teamDomain,

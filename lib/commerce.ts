@@ -17,6 +17,7 @@ import {
   requireNewOrderConfiguration,
 } from "@/lib/commerce-config";
 import {
+  retryExternalFulfillmentForOrderNow,
   scheduleExternalFulfillmentRetry,
   syncExternalFulfillmentForOrder,
 } from "@/lib/external-fulfillment";
@@ -759,6 +760,36 @@ export async function refreshCommerceOrder(orderId: string) {
   return applyAuthoritativeProviderOrder(configuration, row, providerOrder);
 }
 
+export async function retryCommerceFulfillment(orderId: string) {
+  await ensureDatabaseSchema();
+  const db = getDb();
+  const row = await db.select().from(paymentOrders).where(eq(paymentOrders.id, orderId)).get();
+  if (!row) throw new CommerceError(404, "Pedido não encontrado.", "order_not_found");
+  if (row.status !== "paid" || row.fulfillmentStatus !== "ready") {
+    throw new CommerceError(
+      409,
+      "Este pedido não está aguardando uma liberação automática.",
+      "external_fulfillment_not_ready",
+    );
+  }
+  const externalItem = await getD1Binding().prepare(`
+    SELECT id FROM payment_order_items
+    WHERE order_id = ? AND fulfillment_mode = 'external'
+    LIMIT 1
+  `).bind(orderId).first<{ id: string }>();
+  if (!externalItem) {
+    throw new CommerceError(
+      409,
+      "Este pedido usa entrega manual.",
+      "external_fulfillment_not_applicable",
+    );
+  }
+  await retryExternalFulfillmentForOrderNow(orderId);
+  const updated = await db.select().from(paymentOrders).where(eq(paymentOrders.id, orderId)).get();
+  if (!updated) throw new Error("payment_order_disappeared");
+  return toPublicOrder(updated);
+}
+
 export async function cancelCommerceOrder(orderId: string) {
   const configuration = requireCommerceConfiguration();
   await ensureDatabaseSchema();
@@ -954,7 +985,7 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
   if (configuration) await recoverOneStaleUncreatedOrder(configuration);
   scheduleExternalFulfillmentRetry();
   const safeLimit = Math.min(200, Math.max(1, Math.trunc(limit)));
-  return getDb().select({
+  const orders = await getDb().select({
     id: paymentOrders.id,
     buyerEmail: paymentOrders.buyerEmail,
     providerOrderId: paymentOrders.providerOrderId,
@@ -966,6 +997,55 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
     createdAt: paymentOrders.createdAt,
     updatedAt: paymentOrders.updatedAt,
   }).from(paymentOrders).orderBy(desc(paymentOrders.createdAt)).limit(safeLimit);
+  const jobResult = await getD1Binding().prepare(`
+    SELECT order_id AS orderId, status, attempts,
+      next_attempt_at AS nextAttemptAt, last_error AS lastError, updated_at AS updatedAt
+    FROM payment_fulfillment_jobs
+    WHERE action = 'grant'
+    ORDER BY updated_at DESC
+    LIMIT ?
+  `).bind(Math.max(20, safeLimit * 4)).all<{
+    orderId: string;
+    status: string;
+    attempts: number;
+    nextAttemptAt: number;
+    lastError: string | null;
+    updatedAt: number;
+  }>();
+  const jobByOrder = new Map<string, {
+    status: string;
+    attempts: number;
+    nextAttemptAt: number;
+    lastError: string | null;
+    updatedAt: number;
+  }>();
+  const jobPriority: Record<string, number> = { failed: 4, processing: 3, pending: 2, sent: 1 };
+  for (const job of jobResult.results ?? []) {
+    const current = jobByOrder.get(job.orderId);
+    if (
+      !current ||
+      (jobPriority[job.status] ?? 0) > (jobPriority[current.status] ?? 0) ||
+      (job.status === current.status && job.updatedAt > current.updatedAt)
+    ) {
+      jobByOrder.set(job.orderId, {
+        status: job.status,
+        attempts: job.attempts,
+        nextAttemptAt: job.nextAttemptAt,
+        lastError: job.lastError,
+        updatedAt: job.updatedAt,
+      });
+    }
+  }
+  return orders.map((order) => {
+    const job = jobByOrder.get(order.id);
+    return {
+      ...order,
+      externalFulfillmentStatus: job?.status ?? null,
+      externalFulfillmentAttempts: job?.attempts ?? 0,
+      externalFulfillmentNextAttemptAt: job?.nextAttemptAt ?? null,
+      externalFulfillmentLastError: job?.lastError ?? null,
+    };
+  });
 }
 
 async function applyAuthoritativeProviderOrder(
@@ -1323,3 +1403,4 @@ const webhookSchema = z.object({
   user_id: z.union([z.string().trim().min(1), z.number().int()]),
   data: z.object({ id: z.string().trim().min(1).max(160) }),
 }).passthrough();
+

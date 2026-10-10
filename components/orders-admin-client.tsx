@@ -58,7 +58,10 @@ function fulfillmentStatusLabel(status: string | null) {
 function fulfillmentFailureLabel(reason: string | null) {
   if (!reason) return "";
   if (reason === "fulfillment_http_401") return "O segredo da loja não coincide com o segredo do Juris.";
-  if (reason === "fulfillment_http_404") return "O endpoint de liberação não foi encontrado no Juris.";
+  if (["fulfillment_http_301", "fulfillment_http_302", "fulfillment_http_303", "fulfillment_http_307", "fulfillment_http_308"].includes(reason)) {
+    return "O endpoint está protegido por login. Use o endereço público do Worker juris-immersive-mobile.";
+  }
+  if (reason === "fulfillment_http_404") return "O endpoint não existe neste Worker. Use o endereço público do juris-immersive-mobile.";
   if (reason === "fulfillment_http_503") return "O Juris recebeu a solicitação, mas não conseguiu concluí-la.";
   if (reason === "fulfillment_not_configured") return "A integração externa da loja está incompleta.";
   if (reason.startsWith("Invalid_redirect_value")) return "A configuração de rede da loja é incompatível com a Cloudflare.";

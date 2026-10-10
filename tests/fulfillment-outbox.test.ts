@@ -42,6 +42,8 @@ test("admin can force and await an external fulfillment retry", () => {
   assert.match(route, /retry_fulfillment: retryCommerceFulfillment/);
   assert.match(admin, /Tentar liberação agora/);
   assert.match(admin, /O segredo da loja não coincide com o segredo do Juris/);
+  assert.match(admin, /endereço público do Worker juris-immersive-mobile/);
+  assert.match(admin, /endpoint não existe neste Worker/);
 });
 
 test("mixed fulfillment keeps manual completion available after the external grant", () => {

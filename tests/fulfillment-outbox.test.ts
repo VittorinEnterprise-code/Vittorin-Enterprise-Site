@@ -16,6 +16,7 @@ test("external fulfillment is persisted, signed, retried and kept outside the we
   assert.match(fulfillment, /x-vittorin-signature/);
   assert.match(fulfillment, /redirect: "manual"/);
   assert.doesNotMatch(fulfillment, /redirect: "error"/);
+  assert.match(fulfillment, /fulfillment_remote_\$\{response\.status\}_\$\{remoteCode\}/);
   assert.match(fulfillment, /waitUntil\(dispatchExternalFulfillmentForOrder/);
   assert.match(fulfillment, /retryExternalFulfillmentForOrderNow/);
   assert.match(fulfillment, /WHERE order_id = \? AND status IN \('pending', 'failed'\)/);
@@ -47,6 +48,10 @@ test("admin can force and await an external fulfillment retry", () => {
   assert.match(admin, /O segredo da loja não coincide com o segredo do Juris/);
   assert.match(admin, /endereço público do Worker juris-immersive-mobile/);
   assert.match(admin, /endpoint não existe neste Worker/);
+  assert.match(admin, /MOBILE_EMAIL_NOT_CONFIGURED/);
+  assert.match(admin, /PURCHASE_EMAIL_LINKS_NOT_CONFIGURED/);
+  assert.match(admin, /MOBILE_EMAIL_RELAY_REJECTED/);
+  assert.match(admin, /MOBILE_EMAIL_RELAY_RESPONSE_INVALID/);
 });
 
 test("mixed fulfillment keeps manual completion available after the external grant", () => {

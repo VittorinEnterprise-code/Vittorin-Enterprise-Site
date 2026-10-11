@@ -145,9 +145,22 @@ async function dispatchJob(id: string) {
       redirect: "manual",
       signal: AbortSignal.timeout(8_000),
     });
-    if (!response.ok) throw new Error(`fulfillment_http_${response.status}`);
     const responseBody = await response.text();
     if (responseBody.length > 10_000) throw new Error("fulfillment_response_too_large");
+    if (!response.ok) {
+      let remoteCode = "";
+      try {
+        const failure = JSON.parse(responseBody) as { code?: unknown };
+        if (typeof failure.code === "string" && /^[A-Za-z0-9_.:-]{1,180}$/.test(failure.code)) {
+          remoteCode = failure.code;
+        }
+      } catch {
+        // Preserve the HTTP-only diagnostic when the remote body is not JSON.
+      }
+      throw new Error(remoteCode
+        ? `fulfillment_remote_${response.status}_${remoteCode}`
+        : `fulfillment_http_${response.status}`);
+    }
     const result = JSON.parse(responseBody) as { processed?: unknown };
     if (result.processed !== true) throw new Error("fulfillment_response_invalid");
     await database.prepare(`

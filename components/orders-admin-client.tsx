@@ -58,6 +58,30 @@ function fulfillmentStatusLabel(status: string | null) {
 
 function fulfillmentFailureLabel(reason: string | null) {
   if (!reason) return "";
+  if (reason === "fulfillment_remote_503_MOBILE_EMAIL_NOT_CONFIGURED") {
+    return "Configure o provedor e as credenciais de e-mail no Worker juris-immersive-mobile.";
+  }
+  if (reason === "fulfillment_remote_503_PURCHASE_EMAIL_LINKS_NOT_CONFIGURED") {
+    return "Configure JURIS_WEB_URL e MOBILE_DOWNLOAD_URL no Worker juris-immersive-mobile.";
+  }
+  if (reason === "fulfillment_remote_503_MOBILE_EMAIL_RELAY_REJECTED") {
+    return "O Apps Script recusou o e-mail. Confira APPS_SCRIPT_EMAIL_URL e APPS_SCRIPT_EMAIL_SECRET.";
+  }
+  if (reason === "fulfillment_remote_503_MOBILE_EMAIL_RELAY_UNAVAILABLE") {
+    return "O serviço de e-mail do Apps Script não respondeu. Confira a implantação e tente novamente.";
+  }
+  if (reason === "fulfillment_remote_503_MOBILE_EMAIL_RELAY_RESPONSE_INVALID") {
+    return "O Apps Script respondeu em formato inválido. Confira se a implantação permite acesso a qualquer pessoa.";
+  }
+  if (reason.startsWith("fulfillment_remote_503_MOBILE_EMAIL_RELAY_FAILED_")) {
+    return "O serviço de e-mail do Apps Script respondeu com erro.";
+  }
+  if (reason.startsWith("fulfillment_remote_503_GMAIL_")) {
+    return "O Gmail não conseguiu enviar a mensagem. Confira as credenciais do provedor.";
+  }
+  if (reason === "fulfillment_remote_503_INTERNAL_ERROR") {
+    return "O Juris encontrou uma falha interna ao gravar ou concluir a liberação.";
+  }
   if (reason === "fulfillment_http_401") return "O segredo da loja não coincide com o segredo do Juris.";
   if (["fulfillment_http_301", "fulfillment_http_302", "fulfillment_http_303", "fulfillment_http_307", "fulfillment_http_308"].includes(reason)) {
     return "O endpoint está protegido por login. Use o endereço público do Worker juris-immersive-mobile.";

@@ -1,3 +1,4 @@
+import { bundlePriceError } from "./product-offers";
 import { z } from "zod";
 
 const id = z.string().min(1).max(80).regex(/^[a-z0-9][a-z0-9_-]*$/);
@@ -135,6 +136,7 @@ export const siteContentSchema = z
           stockQuantity: z.number().int().min(0).max(1_000_000),
           inventoryRevision: z.number().int().min(0).max(2_147_483_647),
           fulfillmentMode: z.enum(["manual", "digital", "external"]),
+          accessProducts: z.array(z.enum(["learn", "processus"])).min(1).max(2).refine((items) => new Set(items).size === items.length).default(["learn"]),
           eyebrow: shortText,
           subtitle: shortText,
           description: longText,
@@ -156,10 +158,13 @@ export const siteContentSchema = z
       .max(100),
   })
   .superRefine((content, context) => {
+    const pricingError = bundlePriceError(content.products);
+    if (pricingError) context.addIssue({ code: "custom", path: ["products", content.products.findIndex((p) => p.slug === "juris-immersive-learn-processus"), "priceCents"], message: pricingError });
     const categoryIds = new Set(content.categories.map((category) => category.id));
     const categorySlugs = new Set<string>();
     const productIds = new Set<string>();
     const productSlugs = new Set<string>();
+    const externalSkus = new Set<string>();
     const welcomeIds = new Set<string>();
     const socialIds = new Set<string>();
 
@@ -218,6 +223,11 @@ export const siteContentSchema = z
     });
 
     content.products.forEach((product, index) => {
+      if (product.isSellable && product.fulfillmentMode === "external") {
+        const sku = product.sku.trim();
+        if (!sku || externalSkus.has(sku)) context.addIssue({ code: "custom", path: ["products", index, "sku"], message: "Use um SKU exclusivo para cada oferta com liberação automática." });
+        externalSkus.add(sku);
+      }
       if (productIds.has(product.id)) {
         context.addIssue({
           code: "custom",

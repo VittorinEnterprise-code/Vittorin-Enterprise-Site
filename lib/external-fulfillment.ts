@@ -1,3 +1,4 @@
+import { parseAccessProducts } from "./product-offers";
 import { env, waitUntil } from "cloudflare:workers";
 
 import { ensureDatabaseSchema, getD1Binding } from "@/db";
@@ -17,6 +18,7 @@ type ExternalItemRow = {
   productName: string;
   sku: string;
   quantity: number;
+  accessProducts: string;
 };
 
 type FulfillmentJobRow = {
@@ -29,7 +31,7 @@ type FulfillmentJobRow = {
 
 function actionFor(row: ExternalItemRow): "grant" | "revoke" | null {
   if (row.orderStatus === "paid") return "grant";
-  if (row.orderStatus === "refunded" || row.statusDetail === "charged_back") return "revoke";
+  if (row.orderStatus === "refunded" || row.statusDetail === "charged_back" || (row.orderStatus === "cancelled" && row.paidAt !== null)) return "revoke";
   return null;
 }
 
@@ -66,7 +68,7 @@ async function externalItems(orderId: string) {
       o.status_detail AS statusDetail, o.paid_at AS paidAt,
       o.updated_at AS updatedAt, i.id AS itemId,
       i.product_slug AS productSlug, i.product_name AS productName, i.sku,
-      i.quantity
+      i.quantity, i.access_products AS accessProducts
     FROM payment_orders o
     JOIN payment_order_items i ON i.order_id = o.id
     WHERE o.id = ? AND i.fulfillment_mode = 'external'
@@ -83,13 +85,13 @@ async function enqueue(orderId: string) {
     const occurredAt = action === "grant" ? (row.paidAt ?? row.updatedAt) : row.updatedAt;
     const eventId = `commerce:${row.orderId}:${row.itemId}:${action}`;
     const payload = JSON.stringify({
-      version: 1,
+      version: 2,
       eventId,
       action,
       orderId: row.orderId,
       providerOrderId: row.providerOrderId,
       email: row.buyerEmail,
-      product: { sku: row.sku, slug: row.productSlug, name: row.productName, quantity: row.quantity },
+      product: { sku: row.sku, slug: row.productSlug, name: row.productName, quantity: row.quantity, accessProducts: parseAccessProducts(row.accessProducts) },
       paidAt: row.paidAt ?? 0,
       occurredAt,
     });

@@ -1,3 +1,4 @@
+import { parseAccessProducts } from "./product-offers";
 import { and, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { ensureDatabaseSchema, getD1Binding, getDb } from "@/db";
@@ -60,7 +61,7 @@ export type PublicCheckoutProduct = Pick<
   | "currency"
   | "inventoryMode"
   | "stockQuantity"
->;
+> & { accessProducts: Array<"learn" | "processus"> };
 
 export type PublicPaymentOrder = {
   id: string;
@@ -123,6 +124,7 @@ function toPublicCheckoutProduct(product: ProductRow): PublicCheckoutProduct {
     currency: product.currency,
     inventoryMode: product.inventoryMode,
     stockQuantity: product.stockQuantity,
+    accessProducts: product.fulfillmentMode === "external" ? parseAccessProducts(product.accessProducts) : [],
   };
 }
 
@@ -180,12 +182,18 @@ export async function createCommerceOrder(input: {
     if (product.inventoryMode === "finite" && product.stockQuantity < item.quantity) {
       throw new CommerceError(409, "Estoque insuficiente para esta compra.", "insufficient_stock");
     }
+    if (product.fulfillmentMode === "external" && item.quantity !== 1) {
+      throw new CommerceError(400, "A licença é pessoal. Compre uma unidade por e-mail.", "personal_license_quantity");
+    }
     const totalCents = product.priceCents * item.quantity;
     if (!Number.isSafeInteger(totalCents)) {
       throw new CommerceError(400, "O valor do pedido é inválido.", "amount_invalid");
     }
     return { product, quantity: item.quantity, totalCents, itemId: crypto.randomUUID() };
   });
+  if (snapshots.some(({ product }) => product.fulfillmentMode === "external" && !parseAccessProducts(product.accessProducts).length)) {
+    throw new CommerceError(409, "Os acessos deste produto ainda não foram configurados.", "product_access_not_configured");
+  }
   if (snapshots.some(({ product }) => product.fulfillmentMode === "external")) {
     if (snapshots.some(({ product }) => product.fulfillmentMode === "external" && !product.sku.trim())) {
       throw new CommerceError(409, "O produto ainda não possui um SKU para a entrega automática.", "external_sku_missing");
@@ -221,8 +229,8 @@ export async function createCommerceOrder(input: {
     statements.push(
       database.prepare(`INSERT INTO payment_order_items (
         id, order_id, product_id, product_slug, product_name, sku,
-        unit_price_cents, quantity, total_cents, fulfillment_mode, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        unit_price_cents, quantity, total_cents, fulfillment_mode, access_products, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .bind(
           snapshot.itemId,
           input.requestId,
@@ -234,6 +242,7 @@ export async function createCommerceOrder(input: {
           snapshot.quantity,
           snapshot.totalCents,
           snapshot.product.fulfillmentMode,
+          snapshot.product.accessProducts,
           now,
         ),
       // A finite product with insufficient stock deliberately tries to insert
@@ -254,7 +263,7 @@ export async function createCommerceOrder(input: {
             AND currency = ?
             AND inventory_mode = ?
             AND fulfillment_mode = ?
-            AND sku = ?
+            AND sku = ? AND access_products = ?
             THEN inventory_mode
           ELSE NULL
         END FROM products WHERE id = ?),
@@ -266,7 +275,7 @@ export async function createCommerceOrder(input: {
             AND currency = ?
             AND inventory_mode = ?
             AND fulfillment_mode = ?
-            AND sku = ?
+            AND sku = ? AND access_products = ?
             AND (inventory_mode = 'unlimited' OR stock_quantity >= ?)
             THEN ?
           ELSE NULL
@@ -284,6 +293,7 @@ export async function createCommerceOrder(input: {
           snapshot.product.inventoryMode,
           snapshot.product.fulfillmentMode,
           snapshot.product.sku,
+          snapshot.product.accessProducts,
           snapshot.product.id,
           snapshot.product.inventoryRevision,
           snapshot.product.priceCents,
@@ -291,6 +301,7 @@ export async function createCommerceOrder(input: {
           snapshot.product.inventoryMode,
           snapshot.product.fulfillmentMode,
           snapshot.product.sku,
+          snapshot.product.accessProducts,
           snapshot.quantity,
           snapshot.quantity,
           snapshot.product.id,
@@ -305,7 +316,7 @@ export async function createCommerceOrder(input: {
               inventory_revision = inventory_revision + 1
           WHERE id = ? AND inventory_mode = 'finite' AND archived = 0
             AND inventory_revision = ? AND price_cents = ? AND currency = ?
-            AND fulfillment_mode = ? AND sku = ? AND stock_quantity >= ?`)
+            AND fulfillment_mode = ? AND sku = ? AND access_products = ? AND stock_quantity >= ?`)
           .bind(
             snapshot.quantity,
             snapshot.product.id,
@@ -314,6 +325,7 @@ export async function createCommerceOrder(input: {
             snapshot.product.currency,
             snapshot.product.fulfillmentMode,
             snapshot.product.sku,
+            snapshot.product.accessProducts,
             snapshot.quantity,
           ),
       );
@@ -362,7 +374,7 @@ export async function createCommerceOrder(input: {
       return !product || product.inventoryRevision !== snapshot.inventoryRevision ||
         product.priceCents !== snapshot.priceCents || product.currency !== snapshot.currency ||
         product.inventoryMode !== snapshot.inventoryMode ||
-        product.fulfillmentMode !== snapshot.fulfillmentMode || product.sku !== snapshot.sku;
+        product.fulfillmentMode !== snapshot.fulfillmentMode || product.sku !== snapshot.sku || product.accessProducts !== snapshot.accessProducts;
     });
     if (productChanged) {
       throw new CommerceError(

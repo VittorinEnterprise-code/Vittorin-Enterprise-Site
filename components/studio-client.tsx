@@ -1,5 +1,7 @@
 "use client";
 
+import { prepareJurisOfferDrafts } from "@/lib/product-offers";
+
 import {
   AudioLines,
   ArrowLeft,
@@ -940,6 +942,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
             <TabsContent value="products" className="studio-tab-content">
               <div className="studio-section-heading">
                 <div><p className="eyebrow">VITRINES</p><h2>Produtos</h2></div>
+                <Button variant="outline" onClick={() => setContent({ ...content, products: prepareJurisOfferDrafts(content.products) })}>Preparar ofertas Juris</Button>
                 <Button onClick={() => setProductDraft(newProduct(content.products.length))}>
                   <PackagePlus /> Novo produto
                 </Button>
@@ -1180,6 +1183,12 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                       </SelectContent>
                     </Select>
                   </Field>
+                  {productDraft.fulfillmentMode === "external" && <Field label="Acessos incluídos na compra" hint="Cada compra libera somente os produtos selecionados. O reembolso retira os acessos desta compra.">
+                    <Select value={[...productDraft.accessProducts].sort().join("+")} onValueChange={(value) => setProductDraft({ ...productDraft, accessProducts: value === "learn+processus" ? ["learn", "processus"] : value === "processus" ? ["processus"] : ["learn"] })}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="learn">Somente Learn</SelectItem><SelectItem value="processus">Somente Processus · Addon avulso</SelectItem><SelectItem value="learn+processus">Learn + Processus · pacote</SelectItem></SelectContent>
+                    </Select>
+                  </Field>}
                 </div>
               </div>
               <Field label="Imagem do produto"><Input value={productDraft.imageUrl} onChange={(e) => setProductDraft({ ...productDraft, imageUrl: e.target.value })} /><MediaUpload accept="image/jpeg,image/png,image/webp,image/gif" label="Enviar imagem do produto" onUploaded={(url) => setProductDraft((draft) => draft ? { ...draft, imageUrl: url } : draft)} /></Field>
@@ -1254,7 +1263,7 @@ function newProduct(order: number): Product {
     id: createId("produto"), categoryId: null, name: "", slug: `produto-${suffix}`,
     sku: "", priceCents: 0, currency: "BRL", isSellable: false,
     inventoryMode: "unlimited", stockQuantity: 0, inventoryRevision: 0,
-    fulfillmentMode: "manual",
+    fulfillmentMode: "manual", accessProducts: ["learn"],
     eyebrow: "NOVA EXPERIÊNCIA", subtitle: "", description: "", imageUrl: "",
     videoUrl: "", productUrl: "", ctaLabel: "Conhecer produto", status: "coming_soon",
     accentColor: DEFAULT_CONTENT.settings.accentColor, featured: false, isVisible: true,

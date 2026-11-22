@@ -4,6 +4,7 @@ import { products } from "@/db/schema";
 import { defaultAtelierContent } from "./atelier-content";
 import { productSaveStatement } from "./catalog-products";
 import { sha256Hex } from "./payment-security";
+import { parseAccessProducts } from "./product-offers";
 import type { SiteContent } from "./site-content";
 
 export const atelierSchemaStatements = [
@@ -33,7 +34,7 @@ export async function loadAtelierContent(): Promise<SiteContent> {
   const rows = await getDb().select().from(products).where(and(eq(products.catalogScope, "atelier"), eq(products.archived, false)))
     .orderBy(asc(products.sortOrder), asc(products.name));
   const metadata = new Map(content.products.map((p) => [p.id, p]));
-  return { ...content, products: rows.map((p) => ({ ...p, categoryId: metadata.get(p.id)?.categoryId ?? null,
+  return { ...content, products: rows.map((p) => ({ ...p, accessProducts: parseAccessProducts(p.accessProducts), categoryId: metadata.get(p.id)?.categoryId ?? null,
     downloadKey: metadata.get(p.id)?.downloadKey, downloadName: metadata.get(p.id)?.downloadName })) };
 }
 

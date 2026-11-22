@@ -1,5 +1,7 @@
 import { productSaveStatement } from "./catalog-products";
 import { and, asc, eq } from "drizzle-orm";
+import { ensureJurisOfferDrafts } from "./juris-offer-drafts";
+import { parseAccessProducts } from "./product-offers";
 import { ensureDatabaseSchema, getD1Binding, getDb } from "@/db";
 import {
   appearanceSettings,
@@ -22,6 +24,7 @@ export class ContentSaveConflictError extends Error {
 
 export async function loadSiteContent(): Promise<SiteContent> {
   await ensureDatabaseSchema();
+  await ensureJurisOfferDrafts(getD1Binding());
   const db = getDb();
   const [
     settingsRows,
@@ -102,7 +105,7 @@ export async function loadSiteContent(): Promise<SiteContent> {
       : structuredClone(DEFAULT_CONTENT.socialLinks),
     welcomeElements: welcomeRows,
     categories: categoryRows,
-    products: productRows,
+    products: productRows.map((product) => ({ ...product, accessProducts: parseAccessProducts(product.accessProducts) })),
   };
 }
 

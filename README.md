@@ -76,3 +76,25 @@ O Estúdio exige o Cloudflare Access configurado e as variáveis de domínio da 
 ## Implantação
 
 Consulte [CLOUDFLARE_DEPLOYMENT.md](./CLOUDFLARE_DEPLOYMENT.md) para criar D1, R2, Access e configurar o Workers Builds conectado ao GitHub.
+
+## Atelier reservado
+
+`/studio/atelier` abre o catálogo independente do proprietário usando a mesma proteção do Estúdio. Identidade, textos, categorias, contatos, imagens, vídeos, áudio, fontes, cores, escala e vitrines são editados nessa seção. Os formatos galeria, quadrado e compacto têm geometria metálica e não alteram a loja da empresa. A prévia em `/studio/atelier/vitrine` exige autenticação; os pedidos do Atelier ficam em `/studio/pedidos?atelier=1`.
+
+O público não recebe links no menu ou produtos do Atelier no catálogo principal. Em **Compartilhamento**, o proprietário gera links aleatórios para toda a coleção ou somente um produto, com validade opcional e revogação individual. Somente hashes são guardados no banco: copie o endereço completo ao criá-lo. Quem possui o endereço pode encaminhá-lo. Páginas compartilhadas não são indexadas nem armazenadas em cache; o servidor também exige um link válido antes de aceitar produtos privados no checkout. Um link de produto não dá acesso ao restante da coleção.
+
+Os pagamentos usam a configuração Mercado Pago já existente, com as mesmas verificações de valor, estoque, confirmação e reembolso. Encomendas usam entrega manual. Downloads exigem um arquivo de até 50 MB (ZIP, PDF, MCWORLD, MCPACK, SCHEM, SCHEMATIC, LITEMATIC ou NBT), guardado em área privada do R2. O arquivo é copiado como referência imutável no item vendido; só um pedido confirmado e seu token de acompanhamento permitem baixar. Cancelamentos e reembolsos bloqueiam novos downloads. Arquivos não são publicados na rota pública de mídia.
+
+A migração `0007_private_atelier.sql` e o bootstrap idempotente adicionam a separação dos catálogos. Nenhum preço, produto, link compartilhado ou arquivo real é criado pela implantação. Os testes de integração em `tests/atelier.test.mjs` usam SQLite e um pagamento simulado para verificar isolamento, permissões, links, estoque e downloads.
+
+## Ofertas Juris Immersive
+
+O Estúdio permite definir quais acessos acompanham cada oferta: Learn, Processus avulso ou ambos. As duas novas ofertas são criadas como rascunhos ocultos, sem preço e sem venda habilitada, ao lado de um Learn existente. Valores e configurações já existentes não são substituídos.
+
+Defina os preços no Estúdio antes de habilitar a venda. Quando os três valores estiverem definidos, o pacote deve custar mais que o Learn e menos que a soma do Learn com o Addon avulso. Cada oferta com entrega automática precisa de um SKU exclusivo. A licença é pessoal, de uma unidade por e-mail.
+
+O checkout grava os acessos no item do pedido e a entrega assinada versão 2 usa esse registro tanto na liberação quanto no reembolso, mesmo após uma edição do catálogo. Pedidos antigos recebem por padrão apenas Learn; eventos antigos pendentes mantêm seu formato original.
+
+Publique a atualização das contas no Worker `juris-immersive-mobile` antes desta versão. Os endereços e segredos existentes de entrega são mantidos. A migração `0006_product_access_snapshots.sql` descreve o esquema; a produção Cloudflare mantém o bootstrap idempotente de colunas em `db/index.ts`.
+
+`npm test` inclui testes isolados do SQL real do checkout, concorrência na edição, preservação de preços, ofertas em rascunho e entrega após mudança do catálogo. Nenhuma cobrança real é feita nesses testes.

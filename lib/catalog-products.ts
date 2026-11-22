@@ -1,4 +1,5 @@
 import type { Product } from "./site-content";
+import { parseAccessProducts } from "./product-offers";
 
 export function productSaveStatement(database: D1Database, product: Product, scope: "main" | "atelier" = "main") {
   return database
@@ -10,10 +11,10 @@ export function productSaveStatement(database: D1Database, product: Product, sco
             eyebrow, subtitle, description, image_url, video_url, product_url,
             cta_label, status, accent_color, featured, seller_badge,
             best_seller_badge, promotion_badge, promotion_percent,
-            is_visible, sort_order, catalog_scope
+            is_visible, sort_order, catalog_scope, access_products
           ) VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
           )
           ON CONFLICT(id) DO UPDATE SET
             category_id = excluded.category_id,
@@ -32,6 +33,7 @@ export function productSaveStatement(database: D1Database, product: Product, sco
               ELSE products.inventory_revision
             END,
             fulfillment_mode = excluded.fulfillment_mode,
+            access_products = excluded.access_products,
             archived = 0,
             eyebrow = excluded.eyebrow,
             subtitle = excluded.subtitle,
@@ -82,5 +84,6 @@ export function productSaveStatement(database: D1Database, product: Product, sco
           product.isVisible ? 1 : 0,
           product.sortOrder,
           scope,
+          JSON.stringify(scope === "atelier" ? [] : parseAccessProducts(product.accessProducts)),
         );
 }

@@ -111,6 +111,7 @@ export type Product = {
   fulfillmentMode: "manual" | "digital" | "external";
   downloadKey?: string;
   downloadName?: string;
+  accessProducts: Array<"learn" | "processus">;
   eyebrow: string;
   subtitle: string;
   description: string;
@@ -263,6 +264,7 @@ export const DEFAULT_CONTENT: SiteContent = {
       stockQuantity: 0,
       inventoryRevision: 0,
       fulfillmentMode: "manual",
+      accessProducts: ["learn"],
       eyebrow: "APRENDIZADO IMERSIVO",
       subtitle: "O Direito deixa de ser abstrato.",
       description:

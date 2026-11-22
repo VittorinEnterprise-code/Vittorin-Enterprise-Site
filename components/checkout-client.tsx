@@ -38,6 +38,8 @@ type CheckoutResponse = {
 type CheckoutClientProps = {
   product: PublicCheckoutProduct;
   commerceEnabled: boolean;
+  atelierKey?: string;
+  storefrontPath?: string;
 };
 
 function formatCurrency(cents: number, currency: string) {
@@ -112,7 +114,7 @@ function removePendingAttempt(storageKey: string) {
   }
 }
 
-export function CheckoutClient({ product, commerceEnabled }: CheckoutClientProps) {
+export function CheckoutClient({ product, commerceEnabled, atelierKey, storefrontPath = "/" }: CheckoutClientProps) {
   const finiteStock =
     product.inventoryMode === "finite"
       ? Math.max(0, Math.trunc(product.stockQuantity))
@@ -218,6 +220,7 @@ export function CheckoutClient({ product, commerceEnabled }: CheckoutClientProps
         },
         body: JSON.stringify({
           requestId,
+          ...(atelierKey ? { atelierKey } : {}),
           email: normalizedEmail,
           items: [{ productId: product.id, quantity }],
         }),
@@ -263,12 +266,12 @@ export function CheckoutClient({ product, commerceEnabled }: CheckoutClientProps
   };
 
   return (
-    <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:py-10">
+    <main className={`${storefrontPath !== "/" ? "atelier-checkout " : ""}min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:py-10`}>
       <div className="mx-auto max-w-6xl">
         <header className="flex items-center justify-between gap-4">
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Native reload avoids broken vinext client navigation. */}
           <a
-            href="/"
+            href={storefrontPath}
             className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />

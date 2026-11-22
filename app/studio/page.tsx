@@ -9,7 +9,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function StudioPage() {
+export async function renderStudio(atelier = false) {
   const access = await getAuthorizedAdmin();
   const siteSession = await isSitesAuthenticatedRequest();
   const signOutPath = siteSession
@@ -59,6 +59,9 @@ export default async function StudioPage() {
       adminName={access.user.fullName ?? "Vittorin Enterprise"}
       adminEmail={access.user.email}
       signOutPath={signOutPath}
+      atelier={atelier}
     />
   );
 }
+
+export default async function StudioPage() { return renderStudio(); }

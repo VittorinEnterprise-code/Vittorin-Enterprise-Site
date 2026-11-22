@@ -391,9 +391,9 @@ function WelcomeCard({ element }: { element: WelcomeElement }) {
   );
 }
 
-function ProductCard({ product, commerceEnabled }: { product: Product; commerceEnabled: boolean }) {
+function ProductCard({ product, commerceEnabled, atelierPath }: { product: Product; commerceEnabled: boolean; atelierPath?: string }) {
   const checkoutEnabled = commerceEnabled && product.isSellable && product.priceCents > 0;
-  const productLink = checkoutEnabled
+  const productLink = atelierPath ? `${atelierPath}/${encodeURIComponent(product.slug)}` : checkoutEnabled
     ? `/checkout/${encodeURIComponent(product.slug)}`
     : safeLink(product.productUrl);
   const teaserUrl = safeMedia(product.videoUrl);
@@ -448,8 +448,8 @@ function ProductCard({ product, commerceEnabled }: { product: Product; commerceE
               target={!checkoutEnabled && productLink.startsWith("http") ? "_blank" : undefined}
               rel={!checkoutEnabled && productLink.startsWith("http") ? "noreferrer" : undefined}
             >
-              {checkoutEnabled ? "Comprar agora" : product.ctaLabel}
-              {checkoutEnabled ? <ArrowRight aria-hidden="true" /> : <ExternalLink aria-hidden="true" />}
+              {atelierPath ? product.ctaLabel || "Ver projeto" : checkoutEnabled ? "Comprar agora" : product.ctaLabel}
+              {!atelierPath && (checkoutEnabled ? <ArrowRight aria-hidden="true" /> : <ExternalLink aria-hidden="true" />)}
             </a>
           ) : (
             <span className="product-link product-link-disabled">
@@ -492,9 +492,11 @@ function ProductCard({ product, commerceEnabled }: { product: Product; commerceE
 export function Storefront({
   content,
   commerceEnabled = false,
+  atelierPath,
 }: {
   content: SiteContent;
   commerceEnabled?: boolean;
+  atelierPath?: string;
 }) {
   const { settings, appearance, socialSettings } = content;
   const visibleCategories = useMemo(
@@ -519,6 +521,8 @@ export function Storefront({
   const backgroundAudioUrl = safeMedia(appearance.backgroundAudioUrl);
   const palette = getStorefrontPalette(appearance);
   const visualStyle: React.CSSProperties = {
+    "--atelier-ui": appearance.interfaceScale / 100,
+    "--atelier-font": appearance.fontScale / 100,
     ...storefrontStyle(
       settings.accentColor,
       appearance.interfaceScale,
@@ -643,13 +647,13 @@ export function Storefront({
 
   return (
     <main
-      className={`storefront ${appearance.boldText ? "storefront-bold" : ""} ${customFontUrl && loadedFontUrl === customFontUrl ? "storefront-custom-font" : ""}`}
+      className={`storefront ${atelierPath ? `atelier-storefront atelier-${settings.cardStyle || "gallery"}` : ""} ${appearance.boldText ? "storefront-bold" : ""} ${customFontUrl && loadedFontUrl === customFontUrl ? "storefront-custom-font" : ""}`}
       style={visualStyle}
     >
       <header className="site-header">
-        <a className="header-brand" href="#inicio" aria-label="Vittorin Enterprise — início">
+        <a className="header-brand" href="#inicio" aria-label={`${atelierPath ? settings.brandName : "Vittorin Enterprise"} — início`}>
           <Image src="/brand/vittorin-mark.webp" alt="" width={38} height={38} priority />
-          <span>VITTORIN ENTERPRISE</span>
+          <span>{atelierPath ? settings.brandName : "VITTORIN ENTERPRISE"}</span>
         </a>
 
         <nav
@@ -660,13 +664,13 @@ export function Storefront({
           {settings.showPromoVideo && settings.promoVideoUrl && (
             <a href="#visao" onClick={() => setMenuOpen(false)}>Visão</a>
           )}
-          <a href="#empresa" onClick={() => setMenuOpen(false)}>Empresa</a>
+          {!atelierPath && <a href="#empresa" onClick={() => setMenuOpen(false)}>Empresa</a>}
         </nav>
 
         <div className="header-actions">
           {!palette && <ThemeToggle compact />}
           <Button asChild className="header-cta">
-            <a href="#produtos">Ver produtos <ArrowRight aria-hidden="true" /></a>
+            <a href="#produtos">{atelierPath ? "A coleção" : <>Ver produtos <ArrowRight aria-hidden="true" /></>}</a>
           </Button>
           <Button
             variant="ghost"
@@ -704,7 +708,7 @@ export function Storefront({
           <Button asChild size="lg" className="hero-button">
             <a href={safeLink(settings.primaryCtaUrl) || "#produtos"}>
               {settings.primaryCtaLabel}
-              <ArrowRight aria-hidden="true" />
+              {!atelierPath && <ArrowRight aria-hidden="true" />}
             </a>
           </Button>
         </div>
@@ -727,10 +731,10 @@ export function Storefront({
         <div className="section-heading">
           <div>
             <p className="eyebrow">PORTFÓLIO DIGITAL</p>
-            <h2 id="catalog-title">Produtos concebidos para avançar ideias.</h2>
+            <h2 id="catalog-title">{atelierPath ? settings.catalogTitle || "A coleção" : "Produtos concebidos para avançar ideias."}</h2>
           </div>
           <p>
-            Explore aplicativos e experiências em desenvolvimento pela Vittorin Enterprise.
+            {atelierPath ? settings.catalogDescription : "Explore aplicativos e experiências em desenvolvimento pela Vittorin Enterprise."}
           </p>
         </div>
 
@@ -768,6 +772,7 @@ export function Storefront({
                 key={product.id}
                 product={product}
                 commerceEnabled={commerceEnabled}
+                atelierPath={atelierPath}
               />
             ))}
           </div>
@@ -793,7 +798,7 @@ export function Storefront({
         </section>
       )}
 
-      <section
+      {!atelierPath && <section
         className="manifesto-section"
         id="empresa"
         aria-label="Sobre a Vittorin Enterprise"
@@ -811,7 +816,7 @@ export function Storefront({
             experiências digitais claras, memoráveis e úteis.
           </p>
         </div>
-      </section>
+      </section>}
 
       <footer className="site-footer">
         <div className="footer-brand">

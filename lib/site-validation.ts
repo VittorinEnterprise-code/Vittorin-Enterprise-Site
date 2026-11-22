@@ -22,6 +22,9 @@ function isSafeContactReference(value: string) {
 export const siteContentSchema = z
   .object({
     settings: z.object({
+      catalogTitle: z.string().max(180).optional(),
+      catalogDescription: longText.optional(),
+      cardStyle: z.enum(["gallery", "square", "compact"]).optional(),
       brandName: z.string().min(1).max(80),
       announcement: shortText,
       heroEyebrow: shortText,
@@ -135,6 +138,8 @@ export const siteContentSchema = z
           stockQuantity: z.number().int().min(0).max(1_000_000),
           inventoryRevision: z.number().int().min(0).max(2_147_483_647),
           fulfillmentMode: z.enum(["manual", "digital", "external"]),
+          downloadKey: z.string().max(180).optional(),
+          downloadName: z.string().max(180).optional(),
           eyebrow: shortText,
           subtitle: shortText,
           description: longText,

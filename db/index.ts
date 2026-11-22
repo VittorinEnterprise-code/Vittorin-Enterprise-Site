@@ -311,6 +311,7 @@ export async function ensureDatabaseSchema() {
           ["products", "inventory_revision", "integer NOT NULL DEFAULT 0"],
           ["products", "fulfillment_mode", "text NOT NULL DEFAULT 'manual'"],
           ["products", "archived", "integer NOT NULL DEFAULT 0"],
+          ["products", "catalog_scope", "text NOT NULL DEFAULT 'main'"],
           ["appearance_settings", "theme_enabled", "integer NOT NULL DEFAULT 0"],
           ["appearance_settings", "theme_preset", "text NOT NULL DEFAULT 'juris'"],
           ["appearance_settings", "theme_custom_background", "text NOT NULL DEFAULT '#101820'"],

@@ -1,4 +1,7 @@
 export type SiteSettings = {
+  catalogTitle?: string;
+  catalogDescription?: string;
+  cardStyle?: "gallery" | "square" | "compact";
   brandName: string;
   announcement: string;
   heroEyebrow: string;
@@ -106,6 +109,8 @@ export type Product = {
   stockQuantity: number;
   inventoryRevision: number;
   fulfillmentMode: "manual" | "digital" | "external";
+  downloadKey?: string;
+  downloadName?: string;
   eyebrow: string;
   subtitle: string;
   description: string;

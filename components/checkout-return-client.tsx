@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { OrderDownloads } from "@/components/order-downloads";
 
 const REQUEST_TIMEOUT_MS = 12_000;
 const PENDING_REFRESH_MS = 5_000;
@@ -273,6 +274,7 @@ export function CheckoutReturnClient({ orderId, token }: CheckoutReturnClientPro
                   {error}
                 </p>
               ) : null}
+              {kind === "approved" && orderId && token && <OrderDownloads orderId={orderId} token={token} />}
 
               <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
                 <Button asChild variant="outline">

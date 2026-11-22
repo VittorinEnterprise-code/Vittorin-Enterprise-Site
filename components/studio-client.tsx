@@ -80,11 +80,14 @@ import {
   type WelcomeElement,
 } from "@/lib/site-content";
 import { THEME_PRESETS } from "@/lib/theme-palettes";
+import { AtelierSharing } from "@/components/atelier-sharing";
+import { AtelierFileUpload } from "@/components/atelier-file-upload";
 
 type StudioClientProps = {
   adminName: string;
   adminEmail: string;
   signOutPath: string;
+  atelier?: boolean;
 };
 
 type MediaUploadProps = {
@@ -177,7 +180,9 @@ function Field({
   );
 }
 
-export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClientProps) {
+export function StudioClient({ adminName, adminEmail, signOutPath, atelier = false }: StudioClientProps) {
+  const contentEndpoint = atelier ? "/studio/api/atelier" : "/studio/api/content";
+  const previewPath = atelier ? "/studio/atelier/vitrine" : "/";
   const [content, setContent] = useState<SiteContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -188,7 +193,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
     setLoading(true);
     setLoadError("");
     try {
-      const response = await fetch("/studio/api/content", { cache: "no-store" });
+      const response = await fetch(contentEndpoint, { cache: "no-store" });
       if (!response.ok) throw new Error(await readError(response));
       const result = (await response.json()) as { content: SiteContent };
       setContent(result.content);
@@ -197,7 +202,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [contentEndpoint]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => void load(), 0);
@@ -208,7 +213,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
     if (!content) throw new Error("O conteúdo ainda não foi carregado.");
     setSaving(true);
     try {
-      const response = await fetch("/studio/api/content", {
+      const response = await fetch(contentEndpoint, {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(content),
@@ -216,7 +221,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
       if (!response.ok) throw new Error(await readError(response));
       const result = (await response.json()) as { content: SiteContent };
       setContent(result.content);
-      toast.success("Alterações publicadas na vitrine.");
+      toast.success(atelier ? "Atelier salvo. Os links compartilhados já mostram esta versão." : "Alterações publicadas na vitrine.");
       return { saved: true, products: result.content.products.length };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível salvar.";
@@ -225,7 +230,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
     } finally {
       setSaving(false);
     }
-  }, [content]);
+  }, [content, contentEndpoint, atelier]);
 
   useEffect(() => {
     if (!content) return;
@@ -493,18 +498,18 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
   }
 
   return (
-    <main className="studio-shell">
+    <main className={`studio-shell ${atelier ? "atelier-admin" : ""}`}>
       <aside className="studio-sidebar">
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Native reload avoids broken vinext client navigation. */}
         <a href="/" className="studio-brand" aria-label="Voltar para a vitrine">
           <img src="/brand/vittorin-mark.webp" alt="" />
-          <div><strong>VITTORIN</strong><span>Estúdio</span></div>
+          <div><strong>VITTORIN</strong><span>{atelier ? "Atelier · Estúdio" : "Estúdio"}</span></div>
         </a>
 
         <div className="studio-sidebar-copy">
           <p className="eyebrow">CENTRAL DE EDIÇÃO</p>
-          <h1>Sua vitrine, sob seu controle.</h1>
-          <p>Edite a identidade, organize os produtos e publique quando estiver pronto.</p>
+          <h1>{atelier ? "Criações com identidade própria." : "Sua vitrine, sob seu controle."}</h1>
+          <p>{atelier ? "Uma coleção independente. Somente você administra; visitantes entram pelos links que compartilhar." : "Edite a identidade, organize os produtos e publique quando estiver pronto."}</p>
         </div>
 
         <div className="studio-account">
@@ -512,9 +517,10 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
           <div><strong>{adminName}</strong><small>{adminEmail}</small></div>
         </div>
         <div className="studio-sidebar-actions">
+          <Button asChild variant="ghost" size="sm"><a href={atelier ? "/studio" : "/studio/atelier"}><Boxes />{atelier ? "Loja da empresa" : "Atelier reservado"}</a></Button>
           <ThemeToggle />
           <Button asChild variant="ghost" size="sm">
-            <a href="/studio/pedidos"><ReceiptText aria-hidden="true" /> Pedidos</a>
+            {atelier ? <a href="/studio/pedidos?atelier=1"><ReceiptText aria-hidden="true" /> Pedidos do Atelier</a> : <a href="/studio/pedidos"><ReceiptText aria-hidden="true" /> Pedidos</a>}
           </Button>
           <Button asChild variant="ghost" size="sm">
             <a href={signOutPath} target="_top"><LogOut aria-hidden="true" /> Sair</a>
@@ -526,8 +532,9 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
         <header className="studio-toolbar">
           <div>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Native reload avoids broken vinext client navigation. */}
-            <a href="/" className="studio-back"><ArrowLeft aria-hidden="true" /> Ver vitrine</a>
-            <p>Personalização</p>
+            <a href={previewPath} className="studio-back"><ArrowLeft aria-hidden="true" /> {atelier ? "Prévia do Atelier" : "Ver vitrine"}</a>
+            <p>{atelier ? "Atelier · catálogo e aparência independentes" : "Personalização"}</p>
+            <a className="atelier-toolbar-switch" href={atelier ? "/studio" : "/studio/atelier"}>{atelier ? "Loja da empresa" : "Atelier reservado"}</a>
           </div>
           <Button className="studio-save" onClick={() => void saveContent()} disabled={saving}>
             {saving ? <Loader2 className="animate-spin" /> : <Save />}
@@ -549,9 +556,16 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
               <TabsTrigger value="products"><Boxes /> Produtos</TabsTrigger>
               <TabsTrigger value="categories"><Layers3 /> Categorias</TabsTrigger>
               <TabsTrigger value="media"><MonitorPlay /> Mídia & layout</TabsTrigger>
+              {atelier && <TabsTrigger value="sharing"><Share2 /> Compartilhamento</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="identity" className="studio-tab-content">
+              {atelier && <div className="studio-form-grid atelier-custom-fields">
+                <Field label="Nome do portfólio"><Input value={content.settings.brandName} onChange={(e) => updateSettings("brandName", e.target.value)} /></Field>
+                <Field label="Título da coleção"><Input value={content.settings.catalogTitle || ""} onChange={(e) => updateSettings("catalogTitle", e.target.value)} /></Field>
+                <Field label="Apresentação da coleção"><Textarea value={content.settings.catalogDescription || ""} onChange={(e) => updateSettings("catalogDescription", e.target.value)} /></Field>
+                <Field label="Formato das vitrines"><select className="atelier-native-select" value={content.settings.cardStyle || "gallery"} onChange={(e) => updateSettings("cardStyle", e.target.value as "gallery" | "square" | "compact")}><option value="gallery">Galeria · retângulos amplos</option><option value="square">Quadrados · imagens em destaque</option><option value="compact">Compacto · catálogo objetivo</option></select></Field>
+              </div>}
               <div className="studio-section-heading">
                 <div><p className="eyebrow">IDENTIDADE</p><h2>Mensagem principal</h2></div>
                 <p>Textos, links e elementos que recebem o visitante.</p>
@@ -959,7 +973,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                           : "Venda desativada"} · Ordem {product.sortOrder}
                       </small>
                     </div>
-                    <span className={product.isVisible ? "visibility-live" : "visibility-hidden"}>{product.isVisible ? "Visível" : "Oculto"}</span>
+                    <span className={product.isVisible ? "visibility-live" : "visibility-hidden"}>{product.isVisible ? atelier ? "Nos links" : "Visível" : "Oculto"}</span>
                     <Button variant="outline" size="sm" onClick={() => setProductDraft({ ...product })}>Editar</Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -1065,12 +1079,13 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                 </div>
               </div>
             </TabsContent>
+            {atelier && <TabsContent value="sharing" className="studio-tab-content"><AtelierSharing products={content.products} /></TabsContent>}
           </Tabs>
         </div>
       </section>
 
       <Sheet open={Boolean(productDraft)} onOpenChange={(open) => !open && setProductDraft(null)}>
-        <SheetContent className="product-sheet" side="right">
+        <SheetContent className={`product-sheet ${atelier ? "atelier-sheet" : ""}`} side="right">
           <SheetHeader><SheetTitle>{productDraft && content.products.some((product) => product.id === productDraft.id) ? "Editar produto" : "Novo produto"}</SheetTitle><SheetDescription>Configure a vitrine, a mídia e o destino deste produto.</SheetDescription></SheetHeader>
           {productDraft && (
             <div className="product-sheet-body">
@@ -1174,14 +1189,15 @@ export function StudioClient({ adminName, adminEmail, signOutPath }: StudioClien
                     >
                       <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="manual">Liberação manual</SelectItem>
-                        <SelectItem value="digital">Entrega digital</SelectItem>
-                        <SelectItem value="external">Entrega por sistema externo</SelectItem>
+                        <SelectItem value="manual">{atelier ? "Encomenda ou entrega manual" : "Liberação manual"}</SelectItem>
+                        <SelectItem value="digital">{atelier ? "Download após o pagamento" : "Entrega digital"}</SelectItem>
+                        {!atelier && <SelectItem value="external">Entrega por sistema externo</SelectItem>}
                       </SelectContent>
                     </Select>
                   </Field>
                 </div>
               </div>
+              {atelier && productDraft.fulfillmentMode === "digital" && <AtelierFileUpload name={productDraft.downloadName || ""} onUploaded={(file) => setProductDraft((draft) => draft ? { ...draft, downloadKey: file.key, downloadName: file.name } : draft)} />}
               <Field label="Imagem do produto"><Input value={productDraft.imageUrl} onChange={(e) => setProductDraft({ ...productDraft, imageUrl: e.target.value })} /><MediaUpload accept="image/jpeg,image/png,image/webp,image/gif" label="Enviar imagem do produto" onUploaded={(url) => setProductDraft((draft) => draft ? { ...draft, imageUrl: url } : draft)} /></Field>
               <Field
                 label="Vídeo teaser do produto (opcional)"

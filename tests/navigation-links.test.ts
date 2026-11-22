@@ -18,9 +18,11 @@ test("critical cross-page navigation uses full document requests", () => {
   }
 
   assert.match(studio, /<a href="\/studio\/pedidos">/);
-  assert.match(studio, /<a href="\/" className="studio-back">/);
+  assert.match(studio, /<a href=\{previewPath\} className="studio-back">/);
+  assert.match(studio, /const previewPath = atelier \? "\/studio\/atelier\/vitrine" : "\/"/);
   assert.match(orders, /<a href="\/studio"/);
-  assert.match(checkout, /<a\s+href="\/"/);
+  assert.match(checkout, /<a\s+href=\{storefrontPath\}/);
+  assert.match(checkout, /storefrontPath = "\/"/);
   assert.match(checkoutReturn, /<a\s+href="\/"/);
   assert.match(paymentTest, /<a href="\/studio"/);
 });

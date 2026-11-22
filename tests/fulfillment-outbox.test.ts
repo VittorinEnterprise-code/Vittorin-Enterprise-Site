@@ -21,7 +21,7 @@ test("external fulfillment is persisted, signed, retried and kept outside the we
   assert.match(fulfillment, /retryExternalFulfillmentForOrderNow/);
   assert.match(fulfillment, /WHERE order_id = \? AND status IN \('pending', 'failed'\)/);
   assert.match(fulfillment, /status = 'processing' AND updated_at <= \?/);
-  assert.match(fulfillment, /product: \{ sku: row\.sku, slug: row\.productSlug, name: row\.productName, quantity: row\.quantity \}/);
+  assert.match(fulfillment, /product: \{ sku: row\.sku, slug: row\.productSlug, name: row\.productName, quantity: row\.quantity, accessProducts: parseAccessProducts\(row\.accessProducts\) \}/);
   assert.match(worker, /scheduled\(/);
   assert.match(worker, /retryExternalFulfillment\(5\)/);
   assert.match(cloudflareConfig, /crons: \["\*\/5 \* \* \* \*"\]/);

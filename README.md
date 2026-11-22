@@ -76,3 +76,15 @@ O Estúdio exige o Cloudflare Access configurado e as variáveis de domínio da 
 ## Implantação
 
 Consulte [CLOUDFLARE_DEPLOYMENT.md](./CLOUDFLARE_DEPLOYMENT.md) para criar D1, R2, Access e configurar o Workers Builds conectado ao GitHub.
+
+## Ofertas Juris Immersive
+
+O Estúdio permite definir quais acessos acompanham cada oferta: Learn, Processus avulso ou ambos. As duas novas ofertas são criadas como rascunhos ocultos, sem preço e sem venda habilitada, ao lado de um Learn existente. Valores e configurações já existentes não são substituídos.
+
+Defina os preços no Estúdio antes de habilitar a venda. Quando os três valores estiverem definidos, o pacote deve custar mais que o Learn e menos que a soma do Learn com o Addon avulso. Cada oferta com entrega automática precisa de um SKU exclusivo. A licença é pessoal, de uma unidade por e-mail.
+
+O checkout grava os acessos no item do pedido e a entrega assinada versão 2 usa esse registro tanto na liberação quanto no reembolso, mesmo após uma edição do catálogo. Pedidos antigos recebem por padrão apenas Learn; eventos antigos pendentes mantêm seu formato original.
+
+Publique a atualização das contas no Worker `juris-immersive-mobile` antes desta versão. Os endereços e segredos existentes de entrega são mantidos. A migração `0006_product_access_snapshots.sql` descreve o esquema; a produção Cloudflare mantém o bootstrap idempotente de colunas em `db/index.ts`.
+
+`npm test` inclui testes isolados do SQL real do checkout, concorrência na edição, preservação de preços, ofertas em rascunho e entrega após mudança do catálogo. Nenhuma cobrança real é feita nesses testes.

@@ -310,6 +310,8 @@ export async function ensureDatabaseSchema() {
           ["products", "stock_quantity", "integer NOT NULL DEFAULT 0"],
           ["products", "inventory_revision", "integer NOT NULL DEFAULT 0"],
           ["products", "fulfillment_mode", "text NOT NULL DEFAULT 'manual'"],
+          ["products", "access_products", `text NOT NULL DEFAULT '["learn"]'`],
+          ["payment_order_items", "access_products", `text NOT NULL DEFAULT '["learn"]'`],
           ["products", "archived", "integer NOT NULL DEFAULT 0"],
           ["appearance_settings", "theme_enabled", "integer NOT NULL DEFAULT 0"],
           ["appearance_settings", "theme_preset", "text NOT NULL DEFAULT 'juris'"],
@@ -320,13 +322,15 @@ export async function ensureDatabaseSchema() {
   ] as const;
 
   const readColumns = async () => {
-    const [productInfo, appearanceInfo] = await database.batch<{ name: string }>([
+    const [productInfo, appearanceInfo, orderItemInfo] = await database.batch<{ name: string }>([
       database.prepare("PRAGMA table_info(products)"),
       database.prepare("PRAGMA table_info(appearance_settings)"),
+      database.prepare("PRAGMA table_info(payment_order_items)"),
     ]);
     return {
       products: new Set(productInfo.results.map((field) => field.name)),
       appearance_settings: new Set(appearanceInfo.results.map((field) => field.name)),
+      payment_order_items: new Set(orderItemInfo.results.map((field) => field.name)),
     };
   };
 

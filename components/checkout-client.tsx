@@ -120,7 +120,7 @@ export function CheckoutClient({ product, commerceEnabled }: CheckoutClientProps
   const soldOut = finiteStock === 0;
   const maximumQuantity = Math.max(
     1,
-    Math.min(MAX_QUANTITY_PER_ORDER, finiteStock ?? MAX_QUANTITY_PER_ORDER),
+    Math.min(product.accessProducts.length ? 1 : MAX_QUANTITY_PER_ORDER, finiteStock ?? MAX_QUANTITY_PER_ORDER),
   );
 
   const [email, setEmail] = useState("");
@@ -301,6 +301,7 @@ export function CheckoutClient({ product, commerceEnabled }: CheckoutClientProps
             <h1 id="checkout-product-title" className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
               {product.name}
             </h1>
+            {product.accessProducts.length > 0 && <p className="mt-3 text-sm font-medium">Inclui: {product.accessProducts.map((product) => product === "learn" ? "Juris Immersive Learn" : "Juris Immersive Processus").join(" + ")}</p>}
             {product.subtitle ? (
               <p className="mt-3 text-base leading-7 text-muted-foreground">{product.subtitle}</p>
             ) : null}

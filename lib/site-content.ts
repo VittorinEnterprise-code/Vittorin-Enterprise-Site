@@ -106,6 +106,7 @@ export type Product = {
   stockQuantity: number;
   inventoryRevision: number;
   fulfillmentMode: "manual" | "digital" | "external";
+  accessProducts: Array<"learn" | "processus">;
   eyebrow: string;
   subtitle: string;
   description: string;
@@ -258,6 +259,7 @@ export const DEFAULT_CONTENT: SiteContent = {
       stockQuantity: 0,
       inventoryRevision: 0,
       fulfillmentMode: "manual",
+      accessProducts: ["learn"],
       eyebrow: "APRENDIZADO IMERSIVO",
       subtitle: "O Direito deixa de ser abstrato.",
       description:

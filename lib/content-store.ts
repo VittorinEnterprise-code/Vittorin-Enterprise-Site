@@ -1,3 +1,5 @@
+import { ensureJurisOfferDrafts } from "./juris-offer-drafts";
+import { parseAccessProducts } from "./product-offers";
 import { asc, eq } from "drizzle-orm";
 import { ensureDatabaseSchema, getD1Binding, getDb } from "@/db";
 import {
@@ -21,6 +23,7 @@ export class ContentSaveConflictError extends Error {
 
 export async function loadSiteContent(): Promise<SiteContent> {
   await ensureDatabaseSchema();
+  await ensureJurisOfferDrafts(getD1Binding());
   const db = getDb();
   const [
     settingsRows,
@@ -101,7 +104,7 @@ export async function loadSiteContent(): Promise<SiteContent> {
       : structuredClone(DEFAULT_CONTENT.socialLinks),
     welcomeElements: welcomeRows,
     categories: categoryRows,
-    products: productRows,
+    products: productRows.map((product) => ({ ...product, accessProducts: parseAccessProducts(product.accessProducts) })),
   };
 }
 
@@ -336,13 +339,13 @@ export async function saveSiteContent(content: SiteContent) {
           `INSERT INTO products (
             id, category_id, name, slug, sku, price_cents, currency,
             is_sellable, inventory_mode, stock_quantity, inventory_revision,
-            fulfillment_mode, archived,
+            fulfillment_mode, archived, access_products,
             eyebrow, subtitle, description, image_url, video_url, product_url,
             cta_label, status, accent_color, featured, seller_badge,
             best_seller_badge, promotion_badge, promotion_percent,
             is_visible, sort_order
           ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
           )
           ON CONFLICT(id) DO UPDATE SET
@@ -362,6 +365,7 @@ export async function saveSiteContent(content: SiteContent) {
               ELSE products.inventory_revision
             END,
             fulfillment_mode = excluded.fulfillment_mode,
+            access_products = excluded.access_products,
             archived = 0,
             eyebrow = excluded.eyebrow,
             subtitle = excluded.subtitle,
@@ -395,6 +399,7 @@ export async function saveSiteContent(content: SiteContent) {
           product.inventoryRevision,
           product.fulfillmentMode,
           0,
+          JSON.stringify(product.accessProducts),
           product.eyebrow,
           product.subtitle,
           product.description,

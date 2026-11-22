@@ -11,14 +11,15 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function OrdersPage() {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ atelier?: string }> }) {
   const access = await getAuthorizedAdmin();
   if (access.reason) notFound();
+  const atelier = (await searchParams).atelier === "1";
 
   let orders: Awaited<ReturnType<typeof listCommerceOrdersForAdmin>> = [];
   let loadError = "";
   try {
-    orders = await listCommerceOrdersForAdmin();
+    orders = await listCommerceOrdersForAdmin(100, atelier ? "atelier" : "all");
   } catch (error) {
     console.error(JSON.stringify({
       event: "studio_orders_load_failed",
@@ -28,13 +29,13 @@ export default async function OrdersPage() {
   }
 
   return (
-    <OrdersAdminClient
+    <>{atelier && <aside className="atelier-preview-bar"><span>Pedidos do Atelier</span><a href="/studio/atelier">Voltar ao Atelier</a></aside>}<OrdersAdminClient
       initialOrders={orders.map((order) => ({
         ...order,
         createdAt: order.createdAt.getTime(),
         updatedAt: order.updatedAt.getTime(),
       }))}
       loadError={loadError}
-    />
+    /></>
   );
 }

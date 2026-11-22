@@ -23,6 +23,9 @@ function isSafeContactReference(value: string) {
 export const siteContentSchema = z
   .object({
     settings: z.object({
+      catalogTitle: z.string().max(180).optional(),
+      catalogDescription: longText.optional(),
+      cardStyle: z.enum(["gallery", "square", "compact"]).optional(),
       brandName: z.string().min(1).max(80),
       announcement: shortText,
       heroEyebrow: shortText,
@@ -136,7 +139,9 @@ export const siteContentSchema = z
           stockQuantity: z.number().int().min(0).max(1_000_000),
           inventoryRevision: z.number().int().min(0).max(2_147_483_647),
           fulfillmentMode: z.enum(["manual", "digital", "external"]),
-          accessProducts: z.array(z.enum(["learn", "processus"])).min(1).max(2).refine((items) => new Set(items).size === items.length).default(["learn"]),
+          downloadKey: z.string().max(180).optional(),
+          downloadName: z.string().max(180).optional(),
+          accessProducts: z.array(z.enum(["learn", "processus"])).max(2).refine((items) => new Set(items).size === items.length).default(["learn"]),
           eyebrow: shortText,
           subtitle: shortText,
           description: longText,
@@ -223,6 +228,9 @@ export const siteContentSchema = z
     });
 
     content.products.forEach((product, index) => {
+      if (product.fulfillmentMode === "external" && !product.accessProducts.length) {
+        context.addIssue({ code: "custom", path: ["products", index, "accessProducts"], message: "Escolha os acessos incluídos na entrega externa." });
+      }
       if (product.isSellable && product.fulfillmentMode === "external") {
         const sku = product.sku.trim();
         if (!sku || externalSkus.has(sku)) context.addIssue({ code: "custom", path: ["products", index, "sku"], message: "Use um SKU exclusivo para cada oferta com liberação automática." });

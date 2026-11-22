@@ -155,6 +155,7 @@ export const products = sqliteTable(
       enum: ["manual", "digital", "external"],
     }).notNull().default("manual"),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+    catalogScope: text("catalog_scope", { enum: ["main", "atelier"] }).notNull().default("main"),
     isVisible: integer("is_visible", { mode: "boolean" }).notNull(),
     sortOrder: integer("sort_order").notNull(),
   },
@@ -171,6 +172,21 @@ export const contentSaveGuards = sqliteTable("content_save_guards", {
   id: text("id").primaryKey(),
   ok: integer("ok").notNull(),
 });
+
+export const atelierContent = sqliteTable("atelier_content", {
+  id: integer("id").primaryKey(), contentJson: text("content_json").notNull(), updatedAt: integer("updated_at").notNull(),
+});
+export const atelierLinks = sqliteTable("atelier_links", {
+  id: text("id").primaryKey(), tokenHash: text("token_hash").notNull().unique(), productId: text("product_id"),
+  label: text("label").notNull(), createdAt: integer("created_at").notNull(), expiresAt: integer("expires_at"), revokedAt: integer("revoked_at"),
+}, (t) => [index("idx_atelier_links_product").on(t.productId)]);
+export const atelierProductFiles = sqliteTable("atelier_product_files", {
+  productId: text("product_id").primaryKey(), fileKey: text("file_key").notNull(), fileName: text("file_name").notNull(),
+});
+export const atelierOrderFiles = sqliteTable("atelier_order_files", {
+  itemId: text("item_id").primaryKey(), orderId: text("order_id").notNull(), fileKey: text("file_key").notNull(), fileName: text("file_name").notNull(),
+}, (t) => [index("idx_atelier_order_files_order").on(t.orderId)]);
+export const atelierOrders = sqliteTable("atelier_orders", { orderId: text("order_id").primaryKey() });
 
 // Production commerce is intentionally isolated from the private sandbox harness.
 // Every order and item keeps an immutable snapshot so later catalog edits cannot

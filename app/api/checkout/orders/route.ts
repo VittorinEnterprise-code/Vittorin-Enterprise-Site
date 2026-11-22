@@ -10,6 +10,7 @@ import {
 import { readBoundedJson } from "@/lib/mercado-pago";
 
 const createOrderSchema = z.object({
+  atelierKey: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   requestId: z.string().uuid(),
   email: z.string().trim().email().max(254),
   items: z.array(z.object({

@@ -1,5 +1,6 @@
+import { and, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { canBuyCatalogItems, ensureAtelierSchema } from "./atelier-store";
 import { parseAccessProducts } from "./product-offers";
-import { and, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { ensureDatabaseSchema, getD1Binding, getDb } from "@/db";
 import {
@@ -90,10 +91,11 @@ export class CommerceError extends Error {
 const STALE_CREATION_RECOVERY_MS = 2 * 60 * 1000;
 const CREATION_RECOVERY_THROTTLE_MS = 60 * 1000;
 
-export async function getPublicCheckoutProductBySlug(slug: string) {
+export async function getPublicCheckoutProductBySlug(slug: string, atelierKey?: string) {
   await ensureDatabaseSchema();
   const db = getDb();
   let product = await db.select().from(products).where(eq(products.slug, slug)).get();
+  if (product && product.catalogScope !== "main" && (!atelierKey || !await canBuyCatalogItems(getD1Binding(), [product.id], atelierKey))) return null;
   const configuration = getCommerceConfiguration();
   if (product && configuration) {
     await recoverOneStaleUncreatedOrder(configuration, product.id);
@@ -129,6 +131,7 @@ function toPublicCheckoutProduct(product: ProductRow): PublicCheckoutProduct {
 }
 
 export async function createCommerceOrder(input: {
+  atelierKey?: string;
   requestId: string;
   email: string;
   items: Array<{ productId: string; quantity: number }>;
@@ -145,6 +148,10 @@ export async function createCommerceOrder(input: {
   const publicToken = await orderPublicToken(configuration, input.requestId);
   const publicTokenHash = await sha256Hex(publicToken);
   const db = getDb();
+
+  if (!await canBuyCatalogItems(getD1Binding(), normalizedItems.map((item) => item.productId), input.atelierKey)) {
+    throw new CommerceError(404, "Produto não encontrado ou link de acesso encerrado.", "product_unavailable");
+  }
 
   const existing = await db.select().from(paymentOrders)
     .where(eq(paymentOrders.idempotencyKey, input.requestId)).get();
@@ -191,6 +198,7 @@ export async function createCommerceOrder(input: {
     }
     return { product, quantity: item.quantity, totalCents, itemId: crypto.randomUUID() };
   });
+  if (snapshots.some(({ product }) => product.catalogScope === "atelier")) await ensureAtelierSchema();
   if (snapshots.some(({ product }) => product.fulfillmentMode === "external" && !parseAccessProducts(product.accessProducts).length)) {
     throw new CommerceError(409, "Os acessos deste produto ainda não foram configurados.", "product_access_not_configured");
   }
@@ -208,6 +216,7 @@ export async function createCommerceOrder(input: {
   const now = Date.now();
   const database = getD1Binding();
   const statements: D1PreparedStatement[] = [
+    ...(snapshots.some(({ product }) => product.catalogScope === "atelier") ? [getD1Binding().prepare("INSERT INTO atelier_orders (order_id) VALUES (?)").bind(input.requestId)] : []),
     database.prepare(`INSERT INTO payment_orders (
       id, idempotency_key, request_fingerprint, public_token_hash, buyer_email,
       status, status_detail, currency, total_cents, fulfillment_status,
@@ -309,6 +318,11 @@ export async function createCommerceOrder(input: {
           now,
         ),
     );
+    if (snapshot.product.catalogScope === "atelier" && snapshot.product.fulfillmentMode === "digital") {
+      statements.push(database.prepare(`INSERT INTO atelier_order_files (item_id, order_id, file_key, file_name)
+        VALUES (?, ?, (SELECT file_key FROM atelier_product_files WHERE product_id=?), (SELECT file_name FROM atelier_product_files WHERE product_id=?))`)
+        .bind(snapshot.itemId, input.requestId, snapshot.product.id, snapshot.product.id));
+    }
     if (snapshot.product.inventoryMode === "finite") {
       statements.push(
         database.prepare(`UPDATE products
@@ -992,8 +1006,9 @@ export async function processMercadoPagoWebhook(input: {
   }
 }
 
-export async function listCommerceOrdersForAdmin(limit = 100) {
+export async function listCommerceOrdersForAdmin(limit = 100, scope: "all" | "atelier" = "all") {
   await ensureDatabaseSchema();
+  if (scope === "atelier") await ensureAtelierSchema();
   const configuration = getCommerceConfiguration();
   const externalConfiguration = getExternalFulfillmentConfiguration();
   if (configuration) await recoverOneStaleUncreatedOrder(configuration);
@@ -1010,7 +1025,7 @@ export async function listCommerceOrdersForAdmin(limit = 100) {
     fulfillmentStatus: paymentOrders.fulfillmentStatus,
     createdAt: paymentOrders.createdAt,
     updatedAt: paymentOrders.updatedAt,
-  }).from(paymentOrders).orderBy(desc(paymentOrders.createdAt)).limit(safeLimit);
+  }).from(paymentOrders).where(scope === "atelier" ? sql`EXISTS (SELECT 1 FROM atelier_orders a WHERE a.order_id = ${paymentOrders.id})` : undefined).orderBy(desc(paymentOrders.createdAt)).limit(safeLimit);
   if (orders.length === 0) return [];
   const orderIds = orders.map((order) => order.id);
   const orderPlaceholders = orderIds.map(() => "?").join(", ");

@@ -64,7 +64,8 @@
 
 .atelier-preview-bar + .storefront.atelier-storefront .site-header { position:relative;top:auto; }
 .storefront.atelier-storefront .header-brand span { display:inline;font-size:.8rem; }
-.storefront.atelier-storefront .hero-button,.storefront.atelier-storefront .header-cta { border-radius:2px; }
+.storefront.atelier-storefront .hero-button,.storefront.atelier-storefront .header-cta { border-radius:2px !important;background:linear-gradient(115deg,#817d73 0%,#e3ded2 35%,#b0aaa0 56%,#eeebe4 80%,#91897b) !important;color:#191815 !important; }
+.studio-shell.atelier-admin .studio-save,.studio-shell.atelier-admin .studio-tabs-list [role="tab"] { border-radius:2px !important; }
 
 .storefront.atelier-storefront .hero-copy h1 { font-size:clamp(var(--font-hero-min),var(--font-hero-fluid),var(--font-hero-max)); }
 .storefront.atelier-storefront .hero-copy>p:not(.eyebrow),.storefront.atelier-storefront .product-description,.storefront.atelier-storefront .product-subtitle,.storefront.atelier-storefront .section-heading>p { font-size:var(--font-body); }

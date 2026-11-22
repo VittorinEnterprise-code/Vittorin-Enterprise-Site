@@ -393,7 +393,7 @@ function WelcomeCard({ element }: { element: WelcomeElement }) {
 
 function ProductCard({ product, commerceEnabled, atelierPath }: { product: Product; commerceEnabled: boolean; atelierPath?: string }) {
   const checkoutEnabled = commerceEnabled && product.isSellable && product.priceCents > 0;
-  const productLink = atelierPath ? `${atelierPath}/${encodeURIComponent(product.slug)}` : checkoutEnabled
+  const productLink = atelierPath ? (!product.isSellable && safeLink(product.productUrl) ? safeLink(product.productUrl) : `${atelierPath}/${encodeURIComponent(product.slug)}`) : checkoutEnabled
     ? `/checkout/${encodeURIComponent(product.slug)}`
     : safeLink(product.productUrl);
   const teaserUrl = safeMedia(product.videoUrl);

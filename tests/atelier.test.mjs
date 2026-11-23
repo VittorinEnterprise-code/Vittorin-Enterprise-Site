@@ -29,6 +29,32 @@ function request(method, body, origin = runtime.PUBLIC_SITE_URL) {
 const baseProduct = { ...a.DEFAULT_CONTENT.products[0], status: "available", priceCents: 2000, isSellable: true, isVisible: true, fulfillmentMode: "manual" };
 const p = (id, extra = {}) => ({ ...baseProduct, id, slug: id, name: id, sku: id, categoryId: "atelier-builds", ...extra });
 
+test("existing Atelier presentations retain their appearance until the new controls are configured", () => {
+  assert.deepEqual(a.readAtelierPresentation(), { enabled: true, transparency: 0, titleScale: 100, subtitleScale: 100, titleFont: undefined, subtitleFont: undefined });
+  const style = a.atelierPresentationStyle(undefined, 0, true);
+  assert.equal(style["--atelier-hero-image-opacity"], .23);
+  assert.equal(style["--atelier-hero-cover-opacity"], 1);
+  assert.equal(style["--atelier-hero-panel-alpha"], .92);
+  assert.equal("--atelier-title-font" in style, false, "existing uploaded font choices remain in effect");
+});
+
+test("full presentation transparency removes every darkening layer and scales title/subtitle independently", () => {
+  const style = a.atelierPresentationStyle({ transparency: 100, titleScale: 75, subtitleScale: 130, titleFont: "mono", subtitleFont: "classic" }, 0, true);
+  assert.equal(style["--atelier-hero-image-opacity"], 1);
+  for (const key of ["--atelier-hero-cover-opacity", "--atelier-hero-panel-alpha", "--atelier-hero-panel-end-alpha"]) assert.equal(style[key], 0);
+  assert.equal(style["--atelier-title-scale"], .75); assert.equal(style["--atelier-subtitle-scale"], 1.3);
+  assert.match(style["--atelier-title-font"], /Consolas/); assert.match(style["--atelier-subtitle-font"], /Georgia/);
+});
+
+test("presentation settings accept the three company fonts and reject unsupported values", () => {
+  const content = a.defaultAtelierContent();
+  assert.equal(a.COMPANY_FONT_KEYS.length, 3);
+  for (const font of a.COMPANY_FONT_KEYS) assert.equal(a.siteContentSchema.safeParse({ ...content, settings: { ...content.settings, atelierPresentation: { titleFont: font, subtitleFont: font } } }).success, true);
+  for (const value of [{ transparency: -1 }, { transparency: 101 }, { titleScale: 0 }, { subtitleScale: 201 }, { enabled: "false" }, { titleFont: "url(script)" }]) {
+    assert.equal(a.siteContentSchema.safeParse({ ...content, settings: { ...content.settings, atelierPresentation: value } }).success, false);
+  }
+});
+
 test("private Atelier preserves company catalog, gates shares and checkout, and delivers only paid order snapshots", async (t) => {
   const { db, sqlite } = sqliteDatabase(); runtime.DB = db;
   const blobs = new Map(); runtime.BUCKET = { async put(key, stream) { blobs.set(key, await new Response(stream).arrayBuffer()); }, async get(key) { const data = blobs.get(key); return data ? { size: data.byteLength, body: new Blob([data]).stream() } : null; } };
@@ -56,6 +82,14 @@ test("private Atelier preserves company catalog, gates shares and checkout, and 
     assert.equal((await a.loadAtelierContent()).settings.heroTitle, privateContent.settings.heroTitle);
     assert.equal(sqlite.prepare("SELECT category_id FROM products WHERE id='castle'").get().category_id, null);
     assert.equal((await a.loadAtelierContent()).products.find((p) => p.id === "castle").categoryId, "atelier-builds");
+  });
+  await t.test("presentation controls persist through the owner API without altering the company store", async () => {
+    const saved = await a.loadAtelierContent();
+    saved.settings.atelierPresentation = { enabled: false, transparency: 100, titleScale: 75, subtitleScale: 130, titleFont: "mono", subtitleFont: "classic" };
+    const response = await a.contentApi.PUT(request("PUT", saved)); assert.equal(response.status, 200);
+    assert.deepEqual((await a.loadAtelierContent()).settings.atelierPresentation, saved.settings.atelierPresentation);
+    assert.equal((await a.loadAtelierContent()).settings.heroTitle, saved.settings.heroTitle);
+    assert.equal((await a.loadSiteContent()).settings.atelierPresentation, undefined);
   });
   await t.test("cross-catalog IDs, stale stock, and missing downloads roll back the whole save", async () => {
     const oldMain = await a.loadSiteContent(), oldPrivate = await a.loadAtelierContent();

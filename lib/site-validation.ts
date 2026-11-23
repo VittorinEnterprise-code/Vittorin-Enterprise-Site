@@ -1,5 +1,6 @@
 import { bundlePriceError } from "./product-offers";
 import { z } from "zod";
+import { COMPANY_FONT_KEYS } from "./atelier-presentation";
 
 const id = z.string().min(1).max(80).regex(/^[a-z0-9][a-z0-9_-]*$/);
 const slug = z.string().min(1).max(90).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
@@ -23,6 +24,14 @@ function isSafeContactReference(value: string) {
 export const siteContentSchema = z
   .object({
     settings: z.object({
+      atelierPresentation: z.object({
+        enabled: z.boolean().optional(),
+        transparency: z.number().int().min(0).max(100).optional(),
+        titleScale: z.number().int().min(50).max(200).optional(),
+        subtitleScale: z.number().int().min(50).max(200).optional(),
+        titleFont: z.enum(COMPANY_FONT_KEYS).optional(),
+        subtitleFont: z.enum(COMPANY_FONT_KEYS).optional(),
+      }).strict().optional(),
       catalogTitle: z.string().max(180).optional(),
       catalogDescription: longText.optional(),
       cardStyle: z.enum(["gallery", "square", "compact"]).optional(),

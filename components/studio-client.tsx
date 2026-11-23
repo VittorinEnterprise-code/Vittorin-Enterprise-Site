@@ -84,6 +84,7 @@ import {
 import { THEME_PRESETS } from "@/lib/theme-palettes";
 import { AtelierSharing } from "@/components/atelier-sharing";
 import { AtelierFileUpload } from "@/components/atelier-file-upload";
+import { AtelierPresentationControls } from "@/components/atelier-presentation-controls";
 
 type StudioClientProps = {
   adminName: string;
@@ -562,6 +563,7 @@ export function StudioClient({ adminName, adminEmail, signOutPath, atelier = fal
             </TabsList>
 
             <TabsContent value="identity" className="studio-tab-content">
+              {atelier && <AtelierPresentationControls settings={content.settings} onChange={(value) => updateSettings("atelierPresentation", value)} />}
               {atelier && <div className="studio-form-grid atelier-custom-fields">
                 <Field label="Nome do portfólio"><Input value={content.settings.brandName} onChange={(e) => updateSettings("brandName", e.target.value)} /></Field>
                 <Field label="Título da coleção"><Input value={content.settings.catalogTitle || ""} onChange={(e) => updateSettings("catalogTitle", e.target.value)} /></Field>

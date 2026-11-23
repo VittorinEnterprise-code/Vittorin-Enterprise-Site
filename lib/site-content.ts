@@ -1,4 +1,7 @@
+import type { AtelierPresentation } from "./atelier-presentation";
+
 export type SiteSettings = {
+  atelierPresentation?: AtelierPresentation;
   catalogTitle?: string;
   catalogDescription?: string;
   cardStyle?: "gallery" | "square" | "compact";

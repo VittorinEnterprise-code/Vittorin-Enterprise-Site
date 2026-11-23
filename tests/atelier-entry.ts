@@ -1,5 +1,7 @@
 export * from "../lib/atelier-store";
 export * from "../lib/atelier-content";
+export * from "../lib/atelier-presentation";
+export { siteContentSchema } from "../lib/site-validation";
 export * from "../lib/content-store";
 export * from "../lib/site-content";
 export * from "../lib/commerce";

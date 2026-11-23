@@ -36,6 +36,7 @@ import {
   type WelcomeElement,
 } from "@/lib/site-content";
 import { darkInkFor, getStorefrontPalette, hexRgbTriplet } from "@/lib/theme-palettes";
+import { atelierPresentationStyle, readAtelierPresentation } from "@/lib/atelier-presentation";
 
 type ModelContext = {
   registerTool: (
@@ -499,6 +500,9 @@ export function Storefront({
   atelierPath?: string;
 }) {
   const { settings, appearance, socialSettings } = content;
+  const presentation = readAtelierPresentation(settings.atelierPresentation);
+  const productsOnly = Boolean(atelierPath && !presentation.enabled);
+  const CatalogHeading = productsOnly ? "h1" : "h2";
   const visibleCategories = useMemo(
     () => content.categories.filter((category) => category.isVisible),
     [content.categories],
@@ -521,6 +525,7 @@ export function Storefront({
   const backgroundAudioUrl = safeMedia(appearance.backgroundAudioUrl);
   const palette = getStorefrontPalette(appearance);
   const visualStyle: React.CSSProperties = {
+    ...(atelierPath ? atelierPresentationStyle(settings.atelierPresentation, appearance.showcaseTransparency, appearance.showcaseBlackFade) : {}),
     "--atelier-ui": appearance.interfaceScale / 100,
     "--atelier-font": appearance.fontScale / 100,
     ...storefrontStyle(
@@ -647,11 +652,11 @@ export function Storefront({
 
   return (
     <main
-      className={`storefront ${atelierPath ? `atelier-storefront atelier-${settings.cardStyle || "gallery"}` : ""} ${appearance.boldText ? "storefront-bold" : ""} ${customFontUrl && loadedFontUrl === customFontUrl ? "storefront-custom-font" : ""}`}
+      className={`storefront ${atelierPath ? `atelier-storefront atelier-${settings.cardStyle || "gallery"} ${productsOnly ? "atelier-products-only" : ""} ${presentation.transparency === 100 ? "atelier-presentation-transparent" : ""} ${presentation.titleFont ? "atelier-title-font" : ""} ${presentation.subtitleFont ? "atelier-subtitle-font" : ""}` : ""} ${appearance.boldText ? "storefront-bold" : ""} ${customFontUrl && loadedFontUrl === customFontUrl ? "storefront-custom-font" : ""}`}
       style={visualStyle}
     >
       <header className="site-header">
-        <a className="header-brand" href="#inicio" aria-label={`${atelierPath ? settings.brandName : "Vittorin Enterprise"} — início`}>
+        <a className="header-brand" href={productsOnly ? "#produtos" : "#inicio"} aria-label={`${atelierPath ? settings.brandName : "Vittorin Enterprise"} — início`}>
           <Image src="/brand/vittorin-mark.webp" alt="" width={38} height={38} priority />
           <span>{atelierPath ? settings.brandName : "VITTORIN ENTERPRISE"}</span>
         </a>
@@ -661,7 +666,7 @@ export function Storefront({
           aria-label="Navegação principal"
         >
           <a href="#produtos" onClick={() => setMenuOpen(false)}>Produtos</a>
-          {settings.showPromoVideo && settings.promoVideoUrl && (
+          {!productsOnly && settings.showPromoVideo && settings.promoVideoUrl && (
             <a href="#visao" onClick={() => setMenuOpen(false)}>Visão</a>
           )}
           {!atelierPath && <a href="#empresa" onClick={() => setMenuOpen(false)}>Empresa</a>}
@@ -685,7 +690,7 @@ export function Storefront({
         </div>
       </header>
 
-      <section className="hero" id="inicio" aria-labelledby="hero-title">
+      {!productsOnly && <section className="hero" id="inicio" aria-labelledby="hero-title">
         <div className="hero-media" aria-hidden="true">
           <picture>
             <source
@@ -704,7 +709,7 @@ export function Storefront({
         <div className="hero-copy">
           <p className="eyebrow">{settings.heroEyebrow}</p>
           <h1 id="hero-title">{settings.heroTitle}</h1>
-          <p>{settings.heroSubtitle}</p>
+          <p id="hero-subtitle">{settings.heroSubtitle}</p>
           <Button asChild size="lg" className="hero-button">
             <a href={safeLink(settings.primaryCtaUrl) || "#produtos"}>
               {settings.primaryCtaLabel}
@@ -717,9 +722,9 @@ export function Storefront({
           <span>Descobrir</span>
           <ChevronDown aria-hidden="true" />
         </a>
-      </section>
+      </section>}
 
-      {visibleWelcomeElements.length > 0 && (
+      {!productsOnly && visibleWelcomeElements.length > 0 && (
         <section className="welcome-section" aria-label="Boas-vindas">
           <div className="welcome-grid">
             {visibleWelcomeElements.map((element) => <WelcomeCard key={element.id} element={element} />)}
@@ -731,7 +736,7 @@ export function Storefront({
         <div className="section-heading">
           <div>
             <p className="eyebrow">PORTFÓLIO DIGITAL</p>
-            <h2 id="catalog-title">{atelierPath ? settings.catalogTitle || "A coleção" : "Produtos concebidos para avançar ideias."}</h2>
+            <CatalogHeading id="catalog-title" className="atelier-catalog-title">{atelierPath ? settings.catalogTitle || "A coleção" : "Produtos concebidos para avançar ideias."}</CatalogHeading>
           </div>
           <p>
             {atelierPath ? settings.catalogDescription : "Explore aplicativos e experiências em desenvolvimento pela Vittorin Enterprise."}
@@ -785,7 +790,7 @@ export function Storefront({
         )}
       </section>
 
-      {settings.showPromoVideo && settings.promoVideoUrl && (
+      {!productsOnly && settings.showPromoVideo && settings.promoVideoUrl && (
         <section className="promo-section" id="visao" aria-labelledby="promo-title">
           <div className="promo-copy">
             <p className="eyebrow">EM MOVIMENTO</p>
